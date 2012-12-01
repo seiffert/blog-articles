@@ -11,7 +11,7 @@ This repository contains blog articles I wrote.
 * [IPC Spring 2011 – Don’t click! Code!](blog-articles/blob/master/code-dont-click/index.html) - published on [Mayflower's Blog](http://blog.mayflower.de/722-IPC-Spring-2011-Dont-click!-Code!-.html) on July 13th 2011
 
 
-License
-[![](http://i.creativecommons.org/l/by-nc-nd/3.0/88x31.png)](http://creativecommons.org/licenses/by-nc-nd/3.0/deed.en_US)
+
+[![License](http://i.creativecommons.org/l/by-nc-nd/3.0/88x31.png)](http://creativecommons.org/licenses/by-nc-nd/3.0/deed.en_US)
 
 This work is licensed under a [Creative Commons Attribution-NonCommercial-NoDerivs 3.0 Unported License](http://creativecommons.org/licenses/by-nc-nd/3.0/deed.en_US)
