@@ -9,3 +9,8 @@ This repository contains blog articles I wrote.
 * [Doctrine 2](blog-articles/blob/master/doctrine2/index.html) - published on [Mayflower's Blog](http://blog.mayflower.de/792-05.12.-Doctrine-2.html) on December 5th 2011
 * [Traits in PHP 5.4](blog-articles/blob/master/traits-in-php-54/index.html) - published on [Mayflower's Blog](http://blog.mayflower.de/731-Traits-in-PHP-5.4.html) on August 4th 2011
 * [IPC Spring 2011 – Don’t click! Code!](blog-articles/blob/master/code-dont-click/index.html) - published on [Mayflower's Blog](http://blog.mayflower.de/722-IPC-Spring-2011-Dont-click!-Code!-.html) on July 13th 2011
+
+
+License
+[![License](http://i.creativecommons.org/l/by-nc-nd/3.0/88x31.png)](http://creativecommons.org/licenses/by-nc-nd/3.0/deed.en_US)
+This work is licensed under a [Creative Commons Attribution-NonCommercial-NoDerivs 3.0 Unported License](http://creativecommons.org/licenses/by-nc-nd/3.0/deed.en_US)
