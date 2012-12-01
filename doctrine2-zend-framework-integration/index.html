@@ -1,0 +1,148 @@
+<p>In <a href="http://blog.mayflower.de/archives/792-05.12.-Doctrine-2.html">yesterday's article</a> of our advent calendar, we explained the concepts underlying <i>Doctrine 2</i>. In today's article, we want to use that knowledge and create a simple <i>Zend Framework</i> (<i>ZF</i>) application that uses <i>Doctrine 2</i> to persist its business objects.
+</p>
+
+<p>While explaining how to integrate <i>Doctrine 2</i> into <i>Zend Framework</i>, we will create a generic sandbox that can be used for future projects building up on these technologies.
+</p>
+<!--more-->
+<h1>Setting up a ZF project with Doctrine 2</h1>
+
+<p>
+    Since this article is not about how to setup a <i>ZF</i> project, the following steps will require you to have a clean but working project with 
+    the usual folder structure.<br />
+    To use <i>Doctrine 2</i> you will have to get a copy of its source code first. You can get one either from the project's <a href="http://www.doctrine-project.org/projects/orm/2.1/download/2.1.4">website</a> or by cloning the git repository. In my opinion, downloading the source package from the 
+    website is a lot easier (you don't have to take care of all the project's git submodules etc.). So download and extract the archive into a 
+    temporary directory. After that, move the folder <code>Doctrine</code> from the archive's root into the <code>library</code> of your new
+    <i>ZF</i> application. Now, your project structure should look like this:
+</p>
+
+<br />
+<script src="https://gist.github.com/1436040.js?file=gistfile1.txt"></script>
+<br />
+
+<p>
+    The first thing that will occur to you if you look at the <i>Doctrine 2</i> source code is that 100% of the code is
+    namespaced (for a (German) introduction to namespaces have a look at the article "<a href="http://blog.mayflower.de/archives/786-02.12.-PHP-5.3-Features-in-real-life.html">PHP 5.3 Features in Real Life</a>" from a colleague of mine). This is pretty nice for people who are not scared of new 
+    language constructs but for many people that are using <i>ZF</i> it might look odd at first. I am sure that you will get familiar with the syntax
+    differences really fast, but <i>ZF</i> (1) does not - because it does support real namespacing yet (however this will change with version 2).<br />
+    Therefore we have to do some additional work that enables us to autoload classes that reside in namespaces. Luckily, <i>Doctrine 2</i> comes with 
+    a neat set of helper classes bundled in the project <a href="http://www.doctrine-project.org/projects/common"><i>Doctrine Common</i></a> which 
+    also includes a class loader that fulfills our needs. The class loader is called <code>Doctrine\Common\ClassLoader</code> and is really easy to use:
+</p>
+
+<br />
+<script src="https://gist.github.com/1436045.js?file=gistfile1.aw"></script>
+<br />
+
+<p>
+    This code snippet creates and registers a new class loader that looks for classes in the namespace <i>Doctrine</i>. These classes should 
+    be placed in a folder called <i>Doctrine</i> which is part of the current include path. Every namespace separator will be transformed into a
+    directory separator when looking for the classes, so make sure to keep your class-, namespace-, file- and folder-names in sync! 
+</p>
+
+<p>
+    I recommend putting the initialization of the class loader into your application's bootstrap class because this way it can be used for cli 
+    scripts, too. As you might have seen, there are several packages inside the <i>Doctrine</i> folder that we placed in your <i>library</i>. 
+    The folders <i>ORM</i>, <i>DBAL</i> and <i>Common</i> contain the <i>Doctrine 2</i> classes required by the framework. The fourth folder 
+    <i>Symfony</i> contains some classes borrowed from the <a href="http://symfony.com"><i>Symfony2</i></a> framework. To load all these classes,
+    we have to initialize multiple class loaders:
+</p>
+
+<br />
+<script src="https://gist.github.com/1436046.js?file=gistfile1.aw"></script>
+<br />
+
+<p>
+    The initialization of the loaders responsible for <i>Symfony2</i> and entity classes requires a second argument, that indicates the directory
+    in which the classes of the namespaces can be found. If you do not provide this argument, the class loader just looks in the directories of your
+    include path for folder names matching the given namespace.
+</p>
+<br />
+<h2>Creating the Entity Manager</h2>
+
+<p>
+    The next thing we will do is creating an entity manager. To do so, we have to initialize a configuration object (of the type
+    <code>Doctrine\ORM\Configuration</code>) and pass it to the entity manager. Since we want to create a project that can be configured easily, 
+    we separate the configuration data from the initialization code. Let's begin with the initialization code and add the required configuration 
+    directives to our <code>application.ini</code> file later.<br /><br />
+
+    Instead of describing each single option here, I add some detailed comments in the initialization code:
+</p>
+
+<br />
+<script src="https://gist.github.com/1436051.js?file=gistfile1.aw"></script>
+<br />
+
+<p>
+    From now on, you can access the entity manager by requesting it from the <code>Zend_Registry</code>. This should probably be done via a 
+    dependency injection system, but this article will not cover how to implement dependency injection or even a dependency injection container.<br />
+    To make this bootstrap code work, you will have to add the following directives to your <code>application.ini</code>:
+</p>
+
+<br />
+<script src="https://gist.github.com/1436056.js?file=gistfile1.txt"></script>
+<br />
+
+<p>
+    Basically, this is all you have to do to integrate <i>Doctrine 2</i> into your <i>ZF</i> application. It is fully functional with this
+    configuration, so let us take a snapshot of the project now and declare it as our sandbox for future <i>ZF-Doctrine 2</i> projects.<br />\
+    Next, I want to show you how to create entity classes within your project and how to initialize a database scheme from these entities.
+</p>
+<br /> 
+<h2>Creating Entity Classes</h2>
+
+<p>
+    If you have read my <a href="http://blog.mayflower.de/archives/792-05.12.-Doctrine-2.html">yesterday's article</a>, the following part will not 
+    look very new to you. I will create two entity classes: <i>User</i> and <i>Group</i> which have a n:m relationship called <i>membership</i>.
+</p>
+
+<br />
+<script src="https://gist.github.com/1436060.js?file=gistfile1.aw"></script>
+<br />
+
+<script src="https://gist.github.com/1436062.js?file=gistfile1.aw"></script>
+<br />
+
+<p>
+    To write create tables in the database for these entities, we will use <i>Doctrine</i>'s console tools which are really handy. Create a new 
+    script named <code>doctrine.php</code> in your application's <code>bin</code> directory and copy the following code snippet into it.
+</p>
+
+<br />
+<script src="https://gist.github.com/1436064.js?file=gistfile1.aw"></script>
+<br />
+
+<p>
+    This script sets up a <code>Zend_Application</code> first, bootstraps it and creates a normal <i>Doctrine 2</i> console. You might want to have a 
+    look at the original console script which is included in the <i>Doctrine 2</i> archive we downloaded before. I added the <i>ZF</i> initialization
+    to be able to use the application's configuration here.<br /><br />
+
+    When you run the script now, the output should look like this:
+</p>
+
+<br />
+<script src="https://gist.github.com/1436069.js?file=gistfile1.txt"></script>
+<br />
+
+<p>
+    All actions related to your database's schema have the prefix <code>orm:schema-tool</code>. Create your schema now by executing <br /><br />
+
+    <code>$ php bin/doctrine.php orm:schema-tool:create</code><br /><br />
+
+    If you have no errors in your configuration, your database should have three new tables now: <code>user</code>, <code>group</code> and <code>group_user</code>.
+</p>
+
+<p>
+    Now you are ready to implement your application's logic. You can write code that queries, modifies and creates user and group objects and have 
+    all data persisted by <i>Doctrine 2</i>. To end this article, I just want to give you a feeling for how you might interact with
+    <i>Doctrine 2</i> in your business logic.
+</p>
+
+<br />
+<script src="https://gist.github.com/1436074.js?file=gistfile1.aw"></script>
+<br />
+
+<p>
+    I hope this article helps you setting up the infrastructure for your next project and covers everything you have to know to begin using
+    <i>Doctrine 2</i>. The sandbox we set up can be downloaded <a href="/uploads/PaulBlog/sandbox.tgz">here</a>. Make sure to include the current versions of <i>ZF</i> and
+    <i>Doctrine 2</i> after downloading it.
+</p>
