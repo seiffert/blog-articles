@@ -1,0 +1,45 @@
+Die Mächtigkeit und Einfachheit des HTTP wird in vielerlei Hinsicht oft unterschätzt. Der folgende Artikel stellt einen Aspekt vor, bei dem genau dies der Fall ist: Die Aushandlung des Formats, in welchem Daten per HTTP transportiert werden. Leider wird in den allermeisten HTTP-Applikationen über das Format der Antwort nicht verhandelt. Es werden beispielsweise GET-Requests kategorisch mit HTML beantwortet, ob ein Newsfeed als Atom oder RSS geliefert wird, entscheidet ein URL-Parameter. Auch ist das Kriterium dafür, mit JSON oder XML zu antworten, nicht zu selten, ob auf die Ressource via XMLHTTPRequest zugegriffen wird. Hierbei halten sich selbst moderne HTTP-Applikationen kaum an den Standard.
+<h2>Das Problem</h2>
+Unser Anwendungsbeispiel ist eine Applikation, in der alle Daten sowohl in Form von HTML-Dokumenten als auch in JSON ausgeliefert werden können. Genau für solche Zwecke sieht das HTTP den Request-Header <code>Accept</code> vor. Ein HTTP-Client kann diesen nutzen, um dem Server mitzuteilen, welches Format er gerne in der Antwort vorfinden würde. Dabei kann er nicht nur ein einzelnes Format angeben, sondern auch mehrere und diese sogar priorisieren.
+
+<!--more-->
+<h2>Die Theorie</h2>
+Ein <code>Accept</code>-Header könnte zum Beispiel wie folgt aussehen:
+<small>(für eine allgemeine Format-Beschreibung, liest man am besten den <a title="RFC2616" href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html">HTTP/1.1 - RFC 2616</a>)</small>
+<pre class="lang:default decode:true">Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8</pre>
+Übersetzt bedeutet das etwa:
+<blockquote>Ich hätte gerne ein HTML- oder XHTML-Dokument. Wenn das nicht gehen sollte, möchte ich eines im XML-Format. Notfalls auch irgendetwas anderes.</blockquote>
+Der Parameter <code>q</code>, der optional an jeden angeforderten MIME-Typ angehängt und mit einem Fließkommawert zwischen<code>0.0</code> und <code>1.0</code> belegt werden kann, legt aus Sicht des Clients die Gewichtung des jeweiligen Typs fest.
+
+<strong>Wichtig:</strong> Nicht die Reihenfolge der durch Kommata getrennten Formate, sondern Ihre Gewichtung ergibt die Präferenzen des Clients!
+
+Im oberen Beispiel haben die Formate <code>text/html</code> (wobei <code>text</code> der sogenannte <em>Typ</em> und <code>html</code> der sogenannte <em>Subtyp</em>ist) und <code>application/xhtml+xml</code> implizit die Gewichtung 1. Das Format <code>application/xml</code> hat die Gewichtung 0.9 und alles andere 0.8. Eine korrekt implementierte HTTP-Applikation sollte bei einer solchen Anfrage versuchen, das am höchsten priorisierte Format zurückzuliefern und, falls dieses nicht verfügbar ist, den Client mit dem nächst niedriger priorisierten Format zu bedienen.
+<h2>Umsetzungsideen</h2>
+Um dies in unserer Beispiel-Applikation zu bewerkstelligen, war unser erster Ansatz, einfach in den Controllern eine Unterscheidung anhand des <code>Accept</code>-Headers zu machen:
+
+<script type="text/javascript" src="https://gist.github.com/3542545.js?file=gistfile1.php"></script>Diese Herangehensweise ist natürlich recht umständlich, da man in jeder Controller-Action eine Unterscheidung implementieren muss. Also war unsere nächste Idee, Symfonys Pseudo-Request-Parameter <code>_format</code> zu nutzen, da dieser auch für das Routing verwendet werden kann (<a title="Symfony Advanced Routing Example" href="http://symfony.com/doc/current/book/routing.html#advanced-routing-example">http://symfony.com/doc/current/book/routing.html#advanced-routing-example</a>). Schnell erkannten wir, dass damit unser Vorhaben nur halb erfüllt wird, da Symfony diesen Parameter als Bestandteil der URL eines Requests vorsieht. Damit waren wiederum wir nicht einverstanden, da HTTP ja von Haus aus Content-Type-Negotiation implementiert und wir für jede unserer REST-Resourcen nur eine URI anbieten wollten. Die konkrete Idee war dann, den <code>_format</code>-Parameter künstlich (mit einem Wert aus dem <code>Accept</code>-Header) zu setzen und <code>_format</code> beim Routing zu verwenden. Wir hatten uns überlegt, mehr als eine Route zu definieren, die das gleiche URL-Pattern mit jedoch unterschiedlichen Actions hat und anhand von Requirements über den <code>_format</code>-Parameter entschieden wird, welche Route zu wählen ist.<script type="text/javascript" src="https://gist.github.com/3542557.js?file=gistfile1.yml"></script>
+
+<strong>Vorsicht:</strong> Das vorangegangene Beispiel funktioniert nicht!
+
+Was wir leider nicht wussten, war, dass eine Route nur Requirements über Ihre URL-Parameter (und den speziellen<code>_method</code>-Parameter, der die HTTP-Methode darstellt) beinhalten kann. Mit diesen zwei Routen wählte der Router daher immer die erste aus.
+
+Um das zu umgehen, wollten wir dem Router beibringen, auch Anforderungen an andere Parameter zu evaluieren. Nach ein paar Nachforschungen stellte sich heraus, dass dieser Ansatz sehr viel mehr Aufwand und Schmerzen mit sich bringen würde, weshalb wir uns für das im Folgenden beschriebene Vorgehen entschlossen.
+<h2>Die Lösung</h2>
+Um es nun Entwicklern einfach zu machen, Daten in verschiedenen Formaten anzubieten, implementierten wir eine Lösung, welche pro möglichem Format eine Controller-Action vorsieht. In vielen Fällen werden diese Actions nur weitere Funktionen aufrufen, welche die Daten generieren und deren Rückgabewert dann im entsprechenden Format enkodieren. Diese Design-Entscheidung trägt jedoch potentiell dazu bei, dass die Komplexität von Controller Code erheblich verringert wird.
+
+<script type="text/javascript" src="https://gist.github.com/3542585.js?file=gistfile1.php"></script>Als Namenskonvention für die Methoden, welche gleiche Daten in unterschiedlichen Formaten liefern, haben wir festgelegt, dass die Kurzbezeichnung des Formats (also der MIME-<em>Subtyp</em>) als Suffix an den jeweiligen Methodennamen gehängt wird. Zusätzlich zur Methode <code>indexAction</code> entstünden so zum Beispiel auch noch <code>indexActionJson</code> und <code>indexActionHtml</code>. Für den seltenen Fall, dass Formate angefordert werden, die durch ihren MIME-<em>Subtyp</em> nicht eindeutig identifiziert werden können, wird außerdem noch der MIME-<em>Typ</em> angehängt.
+
+<blockquote>
+Kollisionen könnten beispielsweise bei dem <em>Subtypen</em> <code>mp4</code> entstehen, der sowohl im MIME-Typ <code>video/mp4</code>, als auch in <code>application/mp4</code> vorkommt. Aus dem Anhängen des <em>Typs</em> würden dann Action-Namen wie <code>indexActionMp4Video</code> und <code>indexActionMp4Application</code> resultieren, welche dann wieder unterscheidbar wären.
+</blockquote>
+
+Die Prioritäten der Actions sind somit wie folgt festgelegt: Zuerst wird versucht die Methode<code>&lt;Actionname&gt;Action&lt;Subtyp&gt;&lt;Typ&gt;</code> aufzurufen. Falls diese nicht definiert ist, wird nach<code>&lt;Actionname&gt;Action&lt;Subtyp&gt;</code> gesucht. Der Fallback ist wie gewohnt die Methode <code>&lt;Actionname&gt;Action</code>, welche zu diesem Zweck auch immer implementiert werden muss. Die technische Lösung des Problems basiert auf einem EventListener, der auf Symfonys <code>kernel.controller</code>-Event hört und anhand des <code>Accept</code>-Headers die richtige Controller-Action wählt. Dabei sucht er in der durch den Router bestimmten Controller-Klasse nach Actions, die eines der angeforderten Formate zurückliefern. Wird eine solche gefunden, wird diese als Controller-Action gesetzt, anderfalls eine Response mit dem HTTP-Statuscode 406 gesendet.
+
+<h2>Wiederverwendbarkeit</h2>
+
+Um die umgesetzte Lösung anderen Entwicklern zugänglich zu machen, haben wir ein <code>ContentTypeNegotiationBundle</code> geschaffen, welches einfach mit Composer einbindbar ist. Der dazugehörige Quellcode ist auf <a href="https://github.com/elseym/content-type-negotiation-bundle">github.com</a> veröffentlicht.<script type="text/javascript" src="https://gist.github.com/3542612.js?file=composer.json"></script>
+<h2>@Authors</h2>
+<ul>
+	<li>Simon Waibl &lt;simon.waibl@mayflower.de&gt;</li>
+	<li>Paul Seiffert &lt;paul.seiffert@mayflower.de&gt;</li>
+</ul>
