@@ -1,0 +1,153 @@
+<p>
+	In this article, I want to highlight some differences between the two PHP frameworks that have been the most popular ones at the time of writing.
+	Zend Framework (ZF) is currently a quasi-standard in many PHP companies and Symony2's popularity is constantly increasing. Symfony2 is pretty new now and many developers are thinking about if and when to make the switch from ZF to Symfony2 which is why I think we should spend time looking at the frameworks' differences.
+
+I selected three topics that are implemented differently in these frameworks and will describe how each of them does it. 
+</p>
+<!--more-->
+
+<h2>Project Setup</h2>
+
+<p>
+	I took the setup of new projects as one category of comparison because it is an important to make this step as easy as possible for developers that are learning a new framework. In my opinion, the adoption time of a new technology somehow correlates with the easiness of starting a project with using this technology.
+</p>
+
+<h3>Zend Framework Project Setup</h3>
+
+<p>
+	To set up a Zend Framework (ZF) project, download the framework's <a href="http://framework.zend.com/download/latest" title="ZF download page">minimal package</a> and extract it to an empty directory. You will see two new folders: <code>bin</code> and <code>library</code>. To initialize the project structure, run the included cli script in the project directory like this: <br /><br />
+	<code>php bin/zf.php create project .</code><br /><br />
+	When you now go to <code>http://&lt;hostname&gt;/</code> with your web browser, you see a blue welcome page which indicates that the installation was successful. To configure a database connection, you will have to manually edit the file <code>application/configs/application.ini</code> and add the following lines to the <code>[production]</code> environment.
+</p>
+
+<br />
+<script src="https://gist.github.com/1461948.js?file=ZF%20DB%20configuration"></script>
+<br />
+
+<p>
+	After this step, you have a fully functional Zend Framework project which can be configured using different environments. The next step is to implement custom controllers, views and model classes.
+</p>
+
+<h3>Symfony2 Project Setup</h3>
+
+<p>
+	Setting up a project with Symfony2 is pretty easy. You start by <a href="http://symfony.com/download" title="Symfony2 Download page">downloading</a> a copy of the <i>Symfony2 Standard Edition</i>, extract it to an empty directory and can start to configure your project. However your system has to fulfill some requirements which can be checked by running the script <code>check.php</code> in the <code>app</code> folder (just run <code>php check.php</code> in the command line). When all requirements are fulfilled (and you created a virtual host with its <code>DocumentRoot</code> pointing to the project's <code>web</code> directory), you can navigate your browser to <code>http://&lt;hostname&gt;/config.php</code> and configure the project via a fancy web UI. After checking all requirements again, the Symfony2 sandbox asks you to enter your database configuration which will be written to a configuration file afterwards. The sandbox also includes a sample page where you can see that everything is up and running: <code>http://&lt;hostname&gt;/app_dev.php/demo/hello/World</code>.<br /><br />
+	To use the sandbox for a real project, I suggest removing the demo pages visited before. Remove the line registering the demo bundle from the file <code>app/AppKernel.php</code> and the demo bundle's router configuration from <code>app/config/routing_dev.yml</code>. Last you can delete the bundle's folder <code>src/Acme</code>.
+</p>
+<br />
+<b>app/AppKernel.php</b><br />
+<script src="https://gist.github.com/1461955.js?file=gistfile1.txt"></script>
+<br />
+<b>app/routing_dev.yml</b><br />
+<script src="https://gist.github.com/1461961.js?file=gistfile1.yml"></script>
+<br />
+
+<p>
+	To be able to define different database connection parameters for the various environments (as with ZF), copy the file <code>app/config/parameters.ini</code> to (this example uses the environment <i>dev</i>, of course you can to the same for any other environment!) <code>app/config/parameters_dev.ini</code> and adjust the other config files accordingly:
+</p>
+
+<br />
+<script src="https://gist.github.com/1461969.js?file=gistfile1.yml"></script>
+<br />
+
+<br />
+<script src="https://gist.github.com/1461971.js?file=gistfile1.txt"></script>
+<br />
+
+<br />
+<script src="https://gist.github.com/1461974.js?file=gistfile1.yml"></script>
+<br />
+
+<h3>Project Setup - Conclusion</h3>
+
+<p>
+	The initialization process of a new project is very easy with both of the compared frameworks. One benefit of ZF is that it eases the differentiation between different environments when it comes to configuration - all configuration options can appear in one file in multiple configuration environments that inherit default values from other environments in a defined hierarchy. With Symfony2 you have to create a separate config file and include it into your project's configuration as described above.<br />
+	Symfony2 on the other hand comes with a nice example bundle that contains a sample configuration, controllers, views and even a very basic authentication infrastructure which can be used as template for your own bundles. Of course, the initial project structure of a ZF project has some default controllers as well, but they don't show you how to configure e.g. security.
+</p>
+
+<br />
+<h2>Model View Controller</h2>
+
+<p>
+	The <a href="http://martinfowler.com/eaaDev/uiArchs.html#ModelViewController" target="_blank" title="MVC explained by Martin Fowler">Model View Controller</a> (MVC) pattern is one of the basic structural patterns used in application development. It basically applies the concept of <i>Separation of Concerns</i> to the structure of applications in a way that separates business logic (Model), the rendering of user interfaces (View) and user interaction handling (Controller) from each other. Most object-oriented frameworks provide scaffolding for MVC implementations - so do Zend Framework and Symfony2. Let's have a look how MVC is applied in both cases.
+</p>
+
+<h3>MVC in Zend Framework Projects</h3>
+
+<p>
+	In a classical project infrastructure, ZF projects use controllers that contain multiple actions. Every HTTP request sent to the application is being handled by one (in some cases also multiple) controller's action and most of the times, one action is mapped to one view (This is of course due to the fact that in the WWW, user interaction required a reload of the complete web page - at least for a long time. Nowadays, many web pages (so-called single-page- or Ajax-applications) do not need reloads to change the displayed data and views.).<br />
+	Views are implemented as templates that contain HTML markup code with inlined PHP snippets. To pass data to a view, the controller has to set this data as a member variable on its view. In the view script you can later access this data by using <code>$this->variable</code>.
+</p>
+<p>
+	In web development, the term <i>Model Class</i> is often mistaken for <i>Persistent Entity Class</i>. Model objects do not only represent data stored in a database, but should also contain all the business logic of your applications. I have seen many applications that do all the logic inside of controller classes and only use models to have an abstraction over the database.<br />
+	ZF cannot force you to have model classes for all your logic and it also does not try to do so. What it does is giving you a utility for implementing your database abstraction: <code>Zend_Db</code>. <br />
+	<code>Zend_Db</code> is a component of ZF that provides several APIs to access databases and have an abstraction for persistent records. In times of <a href="http://blog.mayflower.de/archives/792-05.12.-Doctrine-2.html" title="My article about Doctrine 2" target="_blank">Doctrine 2</a>, I would suggest neither to learn the use of <code>Zend_Db</code> nor to implement a custom database abstraction. Doctrine 2 can be integrated into ZF projects very easily as you can look up in my <a href="http://blog.mayflower.de/archives/799-06.12.-Doctrine-2-Zend-Framework-Integration.html" title="My article about Doctrine 2 in ZF projects" target="_blank">article from December 6th</a> and it probably will do a better and more efficient job than a custom solution, too.
+</p>
+
+<p>
+	Besides my own affinity for Doctrine 2, there are several impartial reasons for not using <code>Zend_Db</code>. In my opinion, the biggest disadvantage is that to add custom logic to your entity objects, you end up writing subclasses of <code>Zend_Db_Table_Row_Abstract</code>. This is a thing I really don't like. Dealing with business logic entities that map the application domain should not require you to think about persistence at all (espacially not to subclass a certain class just to make your objects persistable)! You might say "but this is <i>Active Record</i>!" now. Yes, you are right - <code>Zend_Db_Table_Row</code> implements the <a href="http://martinfowler.com/eaaCatalog/activeRecord.html" title="Martin Fowler - Active Record" target="_blank">Active Record</a> pattern. But: Active Record has not heard a word about separation of concerns. Hence it is just a collection of <a href="http://kore-nordmann.de/blog/why_active_record_sucks.html" title="Kore Nordmann - Why active record sucks" target="_blank">bad OO code</a>.
+</p>
+
+<h3>MVC in Symfony2 Projects</h3>
+
+<p>
+	Using Symfony2, you split your application into one or more bundles. Each bundle has its own controller and model classes, configuration and views. Similar to ZF's modules, controllers and the related model classes are grouped into bundles together with views used by these controllers. This way it is easy to reuse code from other projects by just copying the required bundle.<br />
+	One difference regarding controllers is the definition of the term <i>controller</i> in Symfony2: <i>A controller is a PHP function that houses all the logic necessary to return a Response object that represents a particular page.</i> (from the <a href="http://symfony.com/doc/2.0/glossary.html" target="_blank" title="Symfony2 Gloassary">Symfony2 Glossary</a>)<br />
+	Thus a controller does not have to be a full-blown class with differnt actions but only a function handling a specific type of requests. Inside your controller functions, you have to create and return a <code>Response</code> object. How you do this is up to you. There are cases in which you use a templating language (Symfony2 comes with <a href="http://twig.sensiolabs.org/" target="_blank" title="Twig homepage">Twig</a> which might take some getting used to it but is very powerful eventually) for rendering HTML but you can always just serialize some data to provide it via a REST API, too.<br />
+	As with ZF, views are implemented using templates in Symfony2. To use a template, you call the <code>render</code> method in your controller and pass all data required to replace the placeholders in the template. The <code>render</code> method will create a <code>Response</code> object for you which can be returned by your action directly.
+</p>
+
+<p>
+	When it comes to model classes, there are no restrictions in Symfony2. It is recommended to use Doctrine 2 (which also is included in the distribution package of Symfony2) as your applications' ORM system. Doctrine 2 is already integrated into Symfony2 which makes the configuration really easy. If you follwed the steps in the Project Setup section above, you even configured Doctrine 2 already!
+</p>
+
+<h3>MVC Round-Up</h3>
+
+<p>
+	Real MVC is hard to implement the correct way. This is espacially true when it comes to web applications. One major component missing to a real MVC implementation in classic web applications is the synchronity of model and view (which is normally done using an <i>Observer Pattern</i>). Using PHP, HTTP and HTML, you normally render a web page once and the user has to reload the page to see whether there have been changes on the displayed data. By using Ajax in combination with XMPP or any other RealTime-Web implementation, you can imitate this mechanisms. Doing so, you will end up with two MVC implementations: One on the server side and one inside the browser.<br />
+	After the comparison of ZF and Symfony2 regarding MVC, you cannot say that one does a better job at it. Both frameworks help you separating your code, but the real work has still to be done by the developer using the framework.
+</p>
+
+<br />
+<h2>Dependency Handling</h2>
+
+<p>
+	Dependency Injection (DI) has been a buzzword in the last few years (again, PHP adopted this technique some years after the Java world did) and still is, so we will have a look on how the ZF and Symfony2 are handling objects dependent on each other. 
+</p>
+
+<h3>Dependencies in ZF</h3>
+
+<p>
+	There is no real DI mechanism in Zend Framework by now. It comes however with multiple components that do something similar to dependency injection. We will have a short look at two of them: The <code>Zend_Registry</code> and <code>Zend_Application_Resource</code>s.
+</p>
+
+<p>
+	The <b><code>Zend_Registry</code></b> is a container for services that should be available globally in an application. You can access the registry statically, store values in it and access them somewhere else. This approach can be seen as an implementation of the <a href="http://martinfowler.com/articles/injection.html#UsingAServiceLocator" target="_blank">Service Locator</a> pattern. If you have external dependencies in your controller and/or model classes, you can just read them from the registry every time you need them. Two downsides of the <code>Zend_Registry</code> is that it does support lazy initialization of dependencies and that it cannot provide non-shared objects (to achive this, you can always put factory objects into the registry!).<br />
+	Another mechanism related to DI is provided by the package <code>Zend_Application_Resource</code>. Resources are dependencies configured at the time the <code>Zend_Application</code> is being bootstrapped. You can access all application resources in your controller by calling <code>$this->getFrontController()->getParam('bootstrap')->getResource($resourceName)</code>. 
+</p>
+
+<h3>Dependency Injection in Symfony2</h3>
+
+<p>
+	Symfony2 is shipped with a <a href="http://components.symfony-project.org/dependency-injection/" target="_blank" title="Symfony Dependency Injection">dependency injection component</a> which can be used as a standalone package, too. Every Symfony2 project uses it since the framework itself makes use of it in its core components. Besides that, you can benefit from DI in your own bundles as well. Symfony2's dependency injection container is configured via extensions that specify their services and the objects required to build these services. Imagine for example a user management bundle which sends welcome emails to new users. Therefore there might be a service called <code><a href="http://de.wikipedia.org/wiki/ACME" target="_blank" title="A company that makes everything">Acme</a>\UserBundle\WelcomeMailer</code> which requires a mailer object to perform its work. In this case you would create an extension for the DI container and define your service like this:
+</p>
+
+<br />
+<script src="https://gist.github.com/1461978.js?file=gistfile1.xml"></script>
+<br />
+
+<p>
+	To access the welcome mailer in a controller, you just call <code>$this->get('welcome.mailer.acme.user')</code> and receive a lazily created instance of the class <code>Acme\UserBundle\WelcomeMailer</code>. Objects defined as arguments of a service will be provided to the service's constructor as parameters. If you want to use the welcome mailer somewhere else, just define it as an argument of this other class and you will have an instance of the service injected.
+</p>
+
+<h3>Dependency Management: Conclusion</h3>
+
+<p>
+	As we have seen, the winner of this discipline is Symfony2. It enables developers to define their objects' dependencies explicitely in a very flexible way. Zend Framework on the other side provides mechanisms that ease the distribution of service objects, but does not implement lazi dependency initialization or and injection of dependencies at all.
+</p>
+
+<br /><br />
+<p>
+    These were just a few differences between Symfony2 and Zend Framework 1. If you got interested in Symfony2 by this article, you should have a look at the framework's website and read the <a href="http://symfony.com/doc/current/book/index.html" title="The Symfony2 Book" target="_blank">Symfony2 bible</a>.<br />
+All in all I prefer Symfony2 for new projects because it makes me write better OO code. Zend Framework is fine, too, but it looks kind of outdated to me. Anyways I'm also excited to see how ZF 2 (currently beta) works and will spend some time comparing it to Symfony2 as well - maybe in another blog article.
+</p>

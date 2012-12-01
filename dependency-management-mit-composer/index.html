@@ -1,0 +1,124 @@
+<p>
+	PHP befindet sich aktuell auf dem Weg, wieder eine angesehene Plattform für professionelle Webanwendungen zu werden. Dieses Ansehen muss sich erst wieder erkauft werden. Noch zu oft leidet die Sprache unter dem Bild, ihre Produkte bestünden nur aus schlecht strukturierten und unprofessionellen Scripts.<br />
+	In vielen Fällen mag dies richtig sein und man muss zugeben, dass die Verwendung von PHP oft dazu verleitet, einen "Quick &amp; Dirty"-Ansatz der sauberen Lösung vorzuziehen. Als professionelle Software-Entwickler müssen wir aber stets versuchen, mit unserer Arbeit hoch-qualitative und nachhaltige Software zu produzieren.
+</p>
+<p>
+	Ein Anspruch, den sich sicher jeder Entwickler stellen muss, ist, die Produkte seiner Arbeit wiederverwendbar zu halten. In diesem Kontext fallen oft die Begriffe Kapselung und Modularisierung. Um Module wiederverwendbar zu machen, müssen diese eine klare Schnittstelle besitzen und möglichst nur eine Aufgabe - und diese Aufgabe dafür richtig - erledigen. Beim Design modularer Applikationen merkt man schnell, dass bestimmte Module bereits an anderer Stelle entwickelt wurden und eventuell wiederverwendet werden können.<br />
+	Dieser Artikel beschreibt eine Software, die das Wiederverwenden von PHP-Modulen automatisiert.
+</p>
+<!--more-->
+<br />
+<h2><i>Composer</i></h2>
+<p>
+	<i><a href="http://getcomposer.org" target="_blank">Composer</a></i> ist eine Software, welche die Wiederverwendung von Quellcode vereinfacht und ein Modell für die Organisation von wiederverwendbaren Software-Komponenten vorschlägt. Ein Vorbild von <i>Composer</i> ist <a href="http://npmjs.org/" target="_blank">NPM</a>, der <i>Node Package Manager</i>: Module heißen Pakete und werden durch eine JSON-Datei mit Metadaten versehen, in der beschrieben ist, welche Abhängigkeiten sie besitzen.
+</p>
+<p>
+	Bei <i>Composer</i> heisst diese JSON-Datei <code>composer.json</code> und beinhaltet sowohl die Metadaten des Moduls (Name, Version, Autoren, etc.), als auch die Liste seiner Abhängigkeiten.<br />
+	Wie <i>NPM</i> regelt <i>Composer</i> nicht nur die Modul-Organisation, sondern auch die Beschaffung von benötigten Paketen. In einer Paket-Beschreibung ist es beispielsweise nicht nur möglich, eine Abhängigkeit auf die Software <code>XYZLogger</code> zu definieren, sondern <i>Composer</i> auch mitzuteilen, dass dieses Modul von <i>Github</i> aus dem Repository <code>https://github.com/XYZ/Logger.git</code> geladen werden soll.
+</p>
+
+<br />
+<h2>Composer-Pakete</h2>
+<p>
+	Ein <i>Paket</i> (engl. <i>Package</i>) ist im Composer-Jargon das, was im Sinne der Quellcode-Wiederverwendung ein Modul ist: Eine relativ große Einheit von Software, die wiederverwendbar gestaltet ist bzw. auch oft explizit für die Wiederverwendbarkeit in anderen Applikationen als Paket definiert wurde.
+</p>
+<p>
+	Zu Beginn eines Projekts, dessen Abhängigkeiten mit <i>Composer</i> verwaltet werden sollen, erstellt man ein Verzeichnis (, initialisiert dort optional ein Git-Repository) und startet <i>Composer</i> mit dem <code>init</code>-Befehl. <i>Composer</i> startet nun mit einer interaktiven Benutzeroberfläche, die einen nach dem Namen des Paketes, einer Beschreibung, dem Author und Abhängigkeiten fragt. Danach wird die Datei <code>composer.json</code> anhand der angegebenen Informationen generiert:
+</p>
+<p style="margin: 10px 30px; border: 1px solid #222; background: #efefef; padding: 10px;">
+	Wir beschreiben in diesem Artikel nicht die Installation von Composer. Eine Anleitung dazu findet man auf der <a href="http://getcomposer.org/doc/00-intro.md#installation" target="_blank"><i>Composer</i>-Webseite</a>.<br /><br />
+	In den Beispielen wird <i>Composer</i> immer durch <code>$ composer</code> aufgerufen (statt <code>$ php composer.phar</code>). Dies dient nur der Lesbarkeit und wurde durch einen simplen Symlink bei der <i>Composer</i>-Installation erreicht.
+</p>
+
+<br />
+<p>
+	<script src="https://gist.github.com/2640561.js?file=gistfile1.sh"></script>
+</p>
+<br />
+
+<p>
+	Im weiteren Verlauf des Projektes wird diese Datei hauptsächlich bzgl. der Abhängigkeiten des Moduls/Projekts erweitert. Da wir wissen, dass unser Beispielprojekt exzessiven Gebrauch von Logging machen wird, beschließen wir gleich zu Beginn, das Paket <i>Monolog</i> zu verwenden. Dazu reicht es aus, eine Version der Software als Abhängigkeit zu definieren und daraufhin <i>Composer</i> zu starten:
+</p>
+
+<br />
+<p>
+	<script src="https://gist.github.com/2640567.js?file=gistfile1.sh"></script>
+</p>
+<br />
+
+<p>
+	<i>Composer</i> installiert die spezifizierte Abhängigkeit dabei in ein konfigurierbares Verzeichnis (standard: <code>vendor</code>). Dort liegen später alle Abhängigkeiten sortiert nach "Anbieter" (engl. vendor):
+</p>
+
+<br />
+<p>
+	<script src="https://gist.github.com/2640571.js?file=gistfile1.sh"></script>
+</p>
+<br />
+
+<p>
+	Neben dem gewünschten Modul <i>Monolog</i> hat Composer auch mehrere Dateien angelegt, die zum Laden der Klassen der abhängigen Module verwendet werden können. Dazu später mehr.
+</p>
+
+<h3>Definition von Abhängigkeiten</h3>
+
+<p>
+	Bei der Definition von Abhängigkeiten muss für jedes Paket eine Angabe zur benötigten Version hinterlegt werden. Dabei kann man neben konkreten Versionsnummern wie 1.3.2 auch Versionsnummern mit Platzhaltern (1.3.*) oder Bereiche von Versionen wie z.B. <code>&gt;=1.3,&lt;1.5</code> angeben. Innerhalb der erlaubten Versionen versucht dann <i>Composer</i> eine Version auszusuchen, die möglichst aktuell ist und keine Konflikte mit anderen Paketen erzeugt.
+</p>
+<p>
+	Neben der Version ist vor Allem noch die Installationsquelle eines Paket wichtig. Das Haupt-Nachschlagwerk für Composer ist die Seite <a href="http://packagist.org/" target="_blank">Packagist.org</a>, welche auch die Standard-Quelle für <i>Composer</i>-Pakete ist. Für Abhängigkeiten, die dort existieren, muss die Herkunft also nicht explizit angegeben werden. Dies ist z.B. auch der Fall bei <a href="http://packagist.org/packages/monolog/monolog" target="_blank"><i>Monolog</i></a>.<br />
+	Für Abhängigkeiten, die nicht auf Packagist veröffentlicht sind, muss man in der Datei <code>composer.json</code> ein <i>Repository</i> angeben, aus welchem das Paket geladen werden kann. Häufig möchte man in einem PHP-Projekt beispielsweise JavaScript-Bibliotheken wie <i>JQuery</i> verwenden, diese aber nicht im eigenen VCS-Repository ablegen. Eine Weg, dieses Problem zu lösen, ist es, das Github-Repository von <i>JQuery</i> zu referenzieren:
+</p>
+
+<br />
+<p>
+	<script src="https://gist.github.com/2640575.js?file=gistfile1.sh"></script>
+</p>
+<br />
+
+<p>
+	Wie oben zu sehen ist, hat ein Repository einen bestimmten Typ (<code>type</code>). Der Typ <code>package</code> wird verwendet, wenn das entsprechende Modul keine eigene Paket-Definition beinhaltet. Diese wird dann innerhalb der Repository-Definition nachgereicht.<br />
+	Für <i>Composer</i>-Pakete, die über eine <code>composer.json</code>-Datei verfügen, jedoch nicht auf <i>Packagist</i> veröffentlicht sind, gibt es noch den Repository-Typen <i>VCS</i>, mit dem man solche Pakete aus einem Git-, Subversion- oder Mercurial-Repository verwenden kann. VCS-Repositories kommen oft zum Einsatz um Abzweigungen (engl. fork) von öffentlichen Modulen auf GitHub zu verwenden. Natürlich lassen sich aber auch lokale Repositories einbinden.
+</p>
+<p>
+	<b>Referenz:</b> <a href="http://getcomposer.org/doc/05-repositories.md#vcs" target="_blank">Composer-Dokumentation zu Repositories</a>
+</p>
+
+<h3>Classloading von Composer-Modulen</h3>
+<p>
+	Um eine PHP-Bibliothek zu verwenden, muss man bekanntlich auch ihre Klassen im eigenen Projekt verfügbar machen. Die meisten aktuellen PHP-Applikationen verwenden dafür einen sog. Autoloader, der automatisch anhand gewisser Regeln herausfinden kann, in welcher Datei eine Klasse definiert ist. Ein Regelsatz, der die Zuordnung von Klassen zu Dateien beschreibt, ist mit <a href="https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-0.md" target="_blank">PSR-0</a> gegeben.
+</p>
+
+<p>
+	Hält man innerhalb seines Moduls diese Regeln ein, kann <i>Composer</i> einen Autoloader generieren, der die Klassen dieses Moduls lädt. Dazu müssen in der Paketbeschreibung lediglich die 
+	angeben, welcher PHP-Namespace aus welchem Ordner innerhalb des Pakets geladen werden soll:
+</p>
+
+<br />
+<p>
+	<script src="https://gist.github.com/2640577.js?file=gistfile1.sh"></script>
+</p>
+<br />
+
+<p>
+	Für Projekte, die das beschriebene Paket verwenden, wird die Datei <code>vendor/autoload.php</code> generiert, die - wenn eingebunden - dafür sorgt, dass die Klassen des Namespaces <code>Seiffert</code> im <code>src</code>-Verzeichnis des Pakets gesucht werden.
+</p>
+
+<p>
+	<b>Referenz:</b> <a href="http://getcomposer.org/doc/01-basic-usage.md#autoloading" target="_blank">Composer-Dokumentation zu Autoloading</a>
+</p>
+
+<h3>Weitere Paket-Metadaten</h3>
+
+<p>
+	Diese kurze Einführung hat natürlich nicht alle erlaubten Attribute eines <i>Composer</i>-Pakets beinhaltet. Die komplette Liste liest man am besten auf der <a href="http://getcomposer.org/doc/04-schema.md" target="_blank">offiziellen Website</a> nach.
+</p>
+<br />
+<br />
+
+<p>
+	Ich persönlich hoffe, dass sich <i>Composer</i> zum Standard für PHP-Projekte entwickelt, da seine Bedienung durch Einfachheit überzeugt und er Entwicklern viele Mühen erspart, die sonst beim Zusammensuchen der notwendigen Libraries aufkommen. In der Entwicklung von Symfony2-Bundles hat <i>Composer</i> diesen Durchbruch bereits geschafft, die allermeisten Bundles befinden sich entweder bereits auf Packagist oder mit einer <code>composer.json</code> auf GitHub.
+</p>
+<p>
+	Da <i>Composer</i> selbst auch in PHP entwickelt wurde, ist die Integration des Tools in die eigenen Anwendungen sehr reizvoll. Aktuell arbeiten wir an einer Integration in Symfony2-Projekte, die wir in naher Zukunft hier präsentieren möchten.
+</p>
