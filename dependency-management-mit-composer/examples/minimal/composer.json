@@ -1,0 +1,12 @@
+{
+    "name": "seiffert/minimal",
+    "authors": [
+        {
+            "name": "Paul Seiffert",
+            "email": "Paul.Seiffert@mayflower.de"
+        }
+    ],
+    "require": {
+
+    }
+}
