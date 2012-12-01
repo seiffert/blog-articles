@@ -7,3 +7,4 @@ This repository contains blog articles I wrote.
 * [Zend Framework (1) vs. Symfony2](blog-articles/blob/master/zend-framework-1-vs-symfony2/index.html) - published on [Mayflower's Blog](http://blog.mayflower.de/808-17.12.-Zend-Framework-1-vs.-Symfony2.html) on December 17th 2011
 * [Doctrine 2 - Zend Framework Integration](blog-articles/blob/master/doctrine2-zend-framework-integration/index.html) - published on [Mayflower's Blog](http://blog.mayflower.de/799-06.12.-Doctrine-2-Zend-Framework-Integration.html) on December 6th 2011
 * [Doctrine 2](blog-articles/blob/master/doctrine2/index.html) - published on [Mayflower's Blog](http://blog.mayflower.de/792-05.12.-Doctrine-2.html) on December 5th 2011
+* [Traits in PHP 5.4](blog-articles/blob/master/traits-in-php-54/index.html) - published on [Mayflower's Blog](http://blog.mayflower.de/731-Traits-in-PHP-5.4.html) on August 4th 2011

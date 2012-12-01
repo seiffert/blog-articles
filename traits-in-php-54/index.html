@@ -1,0 +1,311 @@
+<p>
+Seit PHP die Objekt-Orientierung in genügendem Umfang unterstützt, gab es in Hinsicht auf die Code-Qualität von PHP-Applikationen große Fortschritte. Früher galten PHP-Entwickler als die Vandalen unter den Programmierern, da die Sprache - und dies ändert sich leider nur sehr langsam - sehr viele Möglichkeiten bot, undurchsichtigen und schlecht wartbaren Quellcode zu produzieren. Mit PHP 5 wurde ein großer Schritt in die richtige Richtung gemacht und heute ähnelt die Objekt-Orientierung von PHP der von Java sehr stark. Ende Juni 2011 wurde auf dieser Basis dann ein weiterer Schritt gewagt, der allerdings nicht von Java sondern von der aktuell immer stärker an Popularität gewinnenden Sprache <em>Scala</em> inspiriert wurde. Das neue Sprachfeature nennt sich <b>Traits</b> und ermöglicht Klassen-übergreifenden Code-Reuse ohne vertikale Vererbung. Was sich hier hochgestochen anhört, ist grundsätzlich ein relativ einfacher Mechanismus, der im Folgenden anhand eines simplen Beispiels erläutert wird.
+</p> <br /><!--more--><h2>Einführung des Beispiels</h2> 
+<p>Am einfachsten stellt man sich einen Trait als ein Interface vor, das teilweise bereits die Implementierungen für seine Methoden beinhaltet. Mit Interfaces konnte man bereits vor PHP 5.4 die Funktionalität seiner Klassen bzw. Objekte definieren oder Anforderungen an Parameterobjekte stellen ohne sich dabei auf konkrete Klassen zu beschränken. Als Beispiel - welches auch später zur Erläuterung von Traits verwendet wird - diene hier das folgende Szenario: Bei der Entwicklung einer Web-Applikation sollen alle Daten, die im Frontend angezeigt werden über eine REST-ähnliche JSON-Schnittstelle abrufbar sein, um die spätere Integration der Daten in eine App für Smartphones zu erleichtern. Um die Controller der Applikation so schlank wie möglich zu halten, gibt es eine Klasse <tt>Rest\Response\Json</tt>, welche in allen REST-Controllern verwendet wird um Daten zu enkodieren und an den Client zu senden. Hier zuerst eine Möglichkeit, wie dieses Szenario in PHP 5.3-Code aussehen könnte:</p> 
+
+<pre name="code" class="php">
+use Rest\Response\Json as JsonResponse;
+
+class UserController
+{
+    public function get($id = null)
+    {
+        $userModel = new UserModel();
+
+        $response = null;
+        if (null === $id) {
+            $response = new JsonResponse($userModel->getAllUsers());
+        } else {
+            $user = $userModel->getUserById($id);
+
+            // let's see if there is an user with the given ID
+            if (null === $user) {
+                throw new ResourceNotFoundException('There is no user with ID ' . $id . '.');
+            }
+            $response = new JsonResponse($user);
+        }
+        return $response;
+    }
+}
+</pre>
+
+<p>Der nächste Code-Block zeigt die Klasse <tt>Rest\Response\Json</tt>. Diese erbt von der hier nicht aufgeführten Klasse <tt>Rest\Response\Http</tt>, welche mindestens die Methode <tt>setHttpBody</tt> bereitstellt. Alle Objekte, welche in einer REST-Reponse übertragen werden sollen, müssen das Interface <tt>Json\Serializable</tt> implementieren.</p> 
+
+<pre name="code" class="php">
+namespace Rest\Response;
+
+class Json extends Http
+{
+    public function __construct($data)
+    {
+        if (!is_array($data)) {
+            $data = array($data);
+        }
+        $resources = array();
+        foreach($data as $object) {
+            if (!($object instanceof Json\Serializable)) {
+                throw new InvalidArgumentException('Objects passed to a Rest\Response\Json must implement Json\Serializable.');
+            }
+            $resources[] = $object->toJson();
+        }
+        // the HTTP body is always an array containing the requested resources.
+        $this->setHttpBody('[' . implode(',', $resources) . ']');
+    }
+}
+</pre>
+
+<pre name="code" class="php">
+namespace Json;
+
+interface Serializable
+{
+    public function toJson();
+}
+</pre>
+
+<p>Um nun User-Objekte über REST zum Client zu reichen, muss die Klasse <tt>User</tt> zwingend die Methode <tt>toJson</tt> beinhalten. Es gibt natürlich auch die Möglichkeit, Objekte direkt mit der Funktion <tt>json_encode</tt> zu serialisieren, dazu müssen die zu serialisierenden Objekt-Eigenschaften allerdings als <tt>public</tt> markiert sein. Aus Gründen der Sinnhaftigkeit dieses Beispiels und des persönlichen Programmierstils des Authors wird hier darauf verzichtet die Attribute der Klasse <tt>User</tt> als <tt>public</tt> zu markieren.</p> 
+
+<pre name="code" class="php">
+class User implements Json\Serializable
+{
+    protected $id = null;
+    protected $username = null;
+    protected $first_name = null;
+    protected $last_name = null;
+    protected $email = null;
+
+    /** Accessor methods for the protected properties are omitted. **/
+
+    public function toJson()
+    {
+        $data = array(
+                    'id' => $this->getId(),
+                    'username' => $this->getUsername(),
+                    'first_name' => $this->getFirstName(),
+                    'last_name' => $this->getLastName(),
+                    'email' => $this->getEmail());
+
+        return json_encode($data);
+    }
+}
+</pre>
+
+<p>Wenn man sich nun vorstellt, dass in der beschriebenen Web-Applikation nicht nur Benutzer-Objekte sondern möglicherweise eine Vielzahl unterschiedlicher Objekttypen per JSON-REST verfügbar gemacht werden sollen, zeigt sich, dass in allen Klassen der REST-Resourcen die Methode <tt>toJson</tt> auf sehr ähnliche Weise implementiert wird: Die Objekt-Attribute werden extrahiert und dann JSON-serialisiert zurückgegeben. Das Ergebnis: Eine größere Menge sehr ähnlicher Methoden.</p> 
+
+<br />
+<h2>Umsetzung mit Traits</h2>
+<p>Eine Möglichkeit zur Lösung des Problems ist der Einsatz eines Traits <tt>Json\Serializable</tt> (Wie auch das Interface wird der Trait nach dem Adjektiv benannt, das seine Funktionalität am eindeutigsten impliziert.). Alle Klassen, die diesen Trait implementieren erhalten die Funktionen, die in ihm definiert sind, als echte Member-Funktionen. Man könnte annehmen, dass dies der Mehrfachvererbung gleich kommt, was allerdings nicht der Fall ist, da Traits keine Attribute haben. (Aktuell ist es zwar zulässig, Attribute in Traits zu definieren, wie diese zur Laufzeit gehandhabt werden und welche Regeln bzgl. Sichtbarkeit und Überdeckung dieser Attribute gelten, ist undefiniert. Es ist zu erwarten, dass sich in diesem Punkt noch etwas ändern wird, bevor PHP 5.4 produktionsreif ist.)</p> 
+ 
+<p>Ziel des Umstiegs auf Traits war in diesem Beispiel, die vielen ähnlichen <tt>toJson</tt>-Methoden durch eine einheitliche Implementierung zu ersetzen. Wir treffen hierzu die Konvention, dass alle Objekt-Eigenschaften, die nicht mit einem Unterstrich beginnen, bei einem Aufruf von <tt>toJson</tt> serialisiert werden sollen. (Um den Beispielcode zu verkürzen, wird darauf verzichtet die entsprechende Getter-Methode für jede Eigenschaft aufzurufen. Dies wäre natürlich jedoch mittels einer einfachen Transformationsregel bzw. -konvention zu erledigen.) Die Definition des Traits <tt>Json\Serializable</tt> könnte damit wie folgt aussehen:</p> 
+
+<pre name="code" class="php">
+namespace Json;
+
+trait Serializable {
+    public function toJson()
+    {
+        $result = array();
+        foreach($this as $property => $value) {
+            // check whether the property begins with an underscore
+            if ('_' !== $property{0}) {
+                $result[$property] = $value;
+            }
+        }
+        return json_encode($result);
+    }
+}
+</pre>
+
+<p>Um Instanzen der Klasse <tt>User</tt> nun in JSON zu serialisieren, muss diese folgendermaßen definiert werden:</p> 
+
+<pre name="code" class="php">
+class User
+{
+    use Json\Serializable;
+
+    protected $id = null;
+    protected $username = null;
+    protected $first_name = null;
+    protected $last_name = null;
+    protected $email = null;
+
+    /** Accessor methods for the protected properties are omitted. **/
+}
+</pre>
+
+<p>Mit dem Stichwort <tt>use</tt>, welches im Körper der Klasse <tt>User</tt> verwendet wird, wird definiert, dass die Klasse den Trait <tt>Json\Serializable</tt> verwenden soll. Auf gleiche Weise lassen sich nun auch alle weiteren Entitätsklassen serialisierbar machen. Somit spart man sich eine Menge ähnlichen Quellcodes und man erhält zusätzlich den Vorteil, dass der Code zur Formatierung der Daten nicht mehr in den Entitätsklassen enthalten sein muss, was die Wartbarkeit der Software enorm erhöht.</p> 
+
+<br /> 
+<h2>Mehrere Traits in einer Klasse nutzen</h2> 
+<p>Nun ist es allerdings nicht nur möglich pro Klasse einen Trait zu verwenden, sondern auch mehrere. Somit kann man einer Klasse gleich die Funktionalität mehrerer Traits hinzufügen. Als Beispiel stelle man sich vor, dass der oben beschriebene REST-Service nun nicht nur im JSON- sondern auch im XML-Format verfügbar sein soll. Dazu möchten die Entwickler wieder auf Traits bauen und implementieren den Trait <tt>Xml\Serializable</tt>:</p>
+
+<pre name="code" class="php">
+namespace Xml;
+
+use DOMDocument;
+
+trait Serializable {
+    public function toXml()
+    {
+        $doc = new DOMDocument();
+        foreach($this as $property => $value) {
+            // check whether the property begins with an underscore
+            if ('_' !== $property{0}) {
+                $doc->appendChild($doc->createElement($property, $value));
+            }
+        }
+        return $doc->saveXML();
+    }
+}
+</pre>
+
+<p>In der Klasse <tt>User</tt> muss nun nur die <tt>use</tt>-Direktive erweitert werden und schon können <tt>User</tt>-Objekte auch in XML serialisiert werden:</p> 
+
+<pre class="php" name="code">
+class User
+{
+    use Json\Serializable, Xml\Serializable;
+
+    protected $id = null;
+    protected $username = null;
+    protected $first_name = null;
+    protected $last_name = null;
+    protected $email = null;
+
+    /** Accessor methods for the protected properties are omitted. **/
+}
+</pre>
+
+<br />
+<h2>Namenskonflikte</h2> 
+<p>Ein etwas heikles und viel diskutiertes Thema sind Namenskonflikte, die zwischen den Methoden zwei verschiedener Traits auftreten. Wenn nämlich zwei Traits, die jeweils eine gleichnamige Methode implementieren, von einer Klasse ohne Konfliktbehandlung verwendet werden, wird von PHP ein <tt>Fatal Error</tt> generiert. Zur Konfliktbehandlung wurde die <tt>use</tt>-Direktive um eine spezielle Syntax erweitert, mit der man eine von zwei Methoden priorisieren kann und Aliase für Methodennamen festlegen kann. Ein Beispiel für diesen Fall ist die folgende Entitätsklasse <tt>File</tt>:</p> 
+
+<pre class="php" name="code">
+class File
+{
+    use FileSystem\File, ORM\Persistable;
+
+    protected $filename = null;
+    protected $description = null;
+    protected $content = null;
+
+    public function getFilename()
+    {
+        return $this->filename;
+    }
+
+    public function setFilename($name)
+    {
+        $this->filename = $name;
+    }
+
+    public function getContent()
+    {
+        if (null === $this->content) {
+            $this->content = $this->load();
+        }
+        return $this->content;
+    }
+
+    public function setContent($content)
+    {
+        $this->content = $content;
+    }
+
+    /** Accessor methods for the property $description are omitted. **/
+}
+</pre>
+
+<p>Die Klasse <tt>File</tt> wird in einer Applikation dazu verwendet, Dateien zu repräsentieren, die der Benutzer hochladen kann und die von der Applikation einerseits im Dateisystem abgelegt werden, andererseits aber auch durch einen Eintrag in der Datenbank dargestellt werden. Nun sollen die beiden Traits <tt>FileSystem\File</tt> und <tt>ORM\Persistable</tt> verwendet werden um diese beiden Funktionalitäten zu gewährleisten.</p> 
+ 
+<pre class="php" name="code">
+namespace FileSystem;
+
+trait File
+{
+    public function save() 
+    {
+        $content = $this->getContent();
+        if (null === $content) {
+            $content = "";
+        }
+        file_put_contents($this->getFilename(), $this->getContent());
+    }
+
+    public function load()
+    {
+        return file_get_contents($this->getFilename());
+    }
+
+    public abstract function getFilename();
+}
+</pre>
+
+<p>Der Trait <tt>FileSystem\File</tt> zeigt noch ein weiteres Feature von Traits: Wie in Interfaces kann es auch in Traits nicht-implementierte Methoden geben, die wie auch in Klassen durch das Schlüsselwort <tt>abstract</tt> gekennzeichnet werden.</p> 
+
+<pre class="php" name="code">
+namespace ORM;
+
+trait Persistable
+{
+    public function save() 
+    {
+        /** Code omitted **/
+    }
+}
+</pre>
+
+<p>Wenn man versucht die Klasse <tt>File</tt> mit den beiden Traits so zu laden, erhält man von PHP die folgende Fehlermeldung:</p> 
+<p><b>Fatal error: Trait method save has not been applied, because there are collisions with other trait methods on File [&hellip;]</b></p>
+
+<p>Um nun den offensichtlichen Konflikt zwischen den beiden <tt>save</tt>-Methoden zu beheben, muss man den neuen Operator <tt>insteadof</tt> verwenden und eine der beiden Methoden auswählen. Dadurch übernimmt PHP nur diese eine Methode in die Klasse <tt>File</tt> und lässt die andere fallen. Um die Funktionalität der verworfenen Methode dennoch zur Verfügung zu haben, muss ein Alias für diese definiert werden. Der folgende Code-Abschnitt zeigt die Klasse <tt>File</tt> inklusive Konfliktbehandlung und der Einführung des Aliases <tt>saveToFileSystem</tt> für die Methode <tt>FileSystem\File::save</tt>.</p>
+
+<pre name="code" class="php">
+class File
+{
+    use FileSystem\File, ORM\Persistable {
+        ORM\Persistable::save insteadof FileSystem\File;
+        FileSystem\File::save as saveToFileSystem;
+    }
+
+    protected $filename = null;
+    protected $description = null;
+    protected $content = null;
+
+    public function getFilename()
+    {
+        return $this->filename;
+    }
+
+    public function setFilename($name)
+    {
+        $this->filename = $name;
+    }
+
+    public function getContent()
+    {
+        if (null === $this->content) {
+            $this->content = $this->load();
+        }
+        return $this->content;
+    }
+
+    public function setContent($content)
+    {
+        $this->content = $content;
+    }
+
+    /** Accessor methods for the property $description are omitted. **/
+}
+</pre>
+
+<br />
+<h2>Weiterführende Literatur</h2> 
+<p>Alles in allem sind Traits eine schöne Erweiterung der Objektorientierung in PHP, sollten allerdings mit Vorsicht genossen werden. Sie können auf der einen Seite natürlich wunderbar dazu beitragen, Code-Duplikate zu elimieren und Modularität zu gewährleisten, andererseits düfen sie nicht mit Mehrfachvererbung verwechselt werden und sollten auch nicht in exzessivem Umfang verwendet werden, da dies schnell zu einem nur schwer nachvollziehbarem Gesamtergebnis führt.</p> 
+ 
+<p>Als weiterführende Literatur kann ich folgende Links empfehlen:</p> 
+<ul> 
+	<li>Die technische Spezifikation von Traits in PHP lassen sich gut in der <a href="http://php.net/manual/en/language.oop5.traits.php">PHP-Dokumentation</a> nachlesen.</li> 
+	<li>Um einen Einblick in die Planung des Trait-Supports zu erlangen, bietet sich der <a href="https://wiki.php.net/rfc/horizontalreuse">RFC zu Traits in PHP</a> an.</li> 
+	<li>Eine kurze allgemeine Erklärung zu Traits und eine Liste von Publikationen zu diesem Thema befindet sich auf der Webseite der <a href="http://scg.unibe.ch/research/traits/">Software Composition Group</a> der Universität Bern.</li> 
+</ul>
