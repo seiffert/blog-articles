@@ -1,0 +1,302 @@
+<p>
+    <i>Object-relational mapping</i> (ORM) frameworks have been around for several years now and for some people, ORM is already outdated by now. As we have seen with other technologies and concepts before, PHP is not exactly what we call an early adopter among the programming languages. Thus it took some time for ORM to grow up in the PHP context.</p>
+
+<p>There have been some frameworks before <i>Doctrine 2</i> that implement ORM (remember e.g. <a href="http://propelorm.org" title="Propel">Propel</a>) specific tasks but most of them lack the required maturity to be used in large projects. With <i>Doctrine 2</i>, PHP takes a huge step into the right direction – <i>Doctrine 2</i> is fast, extensible and easy to use.</p>
+
+<p>This article will take you on a tour through the main concepts of <i>Doctrine 2</i> in the first part and then explain how to use it in a real world application in the second part. Since at the time of writing <i>Zend Framework</i> 1.11.xx (<i>ZF</i>) is very popular, we will integrate <i>Doctrine 2</i> into a <i>ZF</i> project.</p>
+<br />
+<!--more-->
+<h1>Basic Concepts</h1>
+<p>
+    To understand <i>Doctrine 2</i>, we have to take a look at some relevant terms (or in this case objects), study their behavior
+    and practice their usage. We start with some introductory phrases on ORM systems and then go on to the concepts underlying
+    <i>Doctrine 2</i>: <i>Entity Objects</i>, the <i>Entity Manager</i>, <i>Repositories</i> and <i>Proxies</i>.
+</p>
+<br />
+<h2>Object-relational Mapping</h2>
+<p>
+    Since the beginning of Object-Orientation, people had to manage the persistence of their application's state resp.
+    their objects. In the context of Web Application Development, this usually involves a Database server which is being
+    consulted using a Query Language. One example for this pattern is a PHP application that uses some kind of SQL server
+    by sending SQL queries to it. Another one is an application using a CouchDB server by querying it via its REST API. <br />
+    Due to the author's laziness, we will talk in terms of relational databases from now on. Keep in mind, that you can
+    accomplish almost everything mentioned here with NoSQL databases, too.
+</p>
+<p>
+    ORM relates value objects that exist in an application's business logic to database records.
+    Thus every object that should be persistent is saved in one row of a database table. The most common approach is to
+    map classes to tables and the classes' objects to rows in the these tables.<br />
+    Besides writing objects to a database, ORM systems are also intended to ease the process of finding data stored in the
+    database. When talking in terms of ORM, finding data always means making the framework fetch one or many objects
+    that meet a certain criteria.
+</p>
+
+<br />
+<h2>Entity Objects</h2>
+<p>
+    The objects that are being managed by an ORM system are called <i>Entity Objects</i>. Every entity object relates to one
+    entry in a table. In <i>Doctrine 2</i>, the classes that represent entities do not have to fulfill special requirements
+    like inheriting from a certain super class (as you might have seen in other database abstraction frameworks like
+    <i>Zend_Db</i>). When creating a new entity class with <i>Doctrine 2</i>, all you have to do is to write down a regular PHP class
+    with properties. Besides this, you have to provide some hints on how these attributes should be persisted.
+    The information how entity attributes relate to columns in the DB is called Metadata. Metadata can be described in
+    different ways: By default there are metadata drivers for descriptions in XML, YAML and PHP. The fourth
+    and most popular driver is based on DocBlock annotations (since in PHP, annotations aren't a language feature as in
+    Java (see <a href="http://en.wikipedia.org/wiki/Java_annotation">Wikipedia</a>), they are contained by the classes' and attributes' DocBlocks).
+    We will use annotations to describe our entities metadata. To get an impression on how easy this is,
+    take a look at the following example.
+</p>
+
+<br />
+<script src="https://gist.github.com/1430553.js?file=gistfile1.aw"></script>
+<br />
+
+<p>
+    This example contains all it needs to tell <i>Doctrine 2</i> about the new entity <code>User</code>. With this class, you can create,
+    find, delete and modify user objects and persist their state to the underlying database. But keep in mind: as long
+    as you don't need any persistence features, you can use your user objects just like any other objects!
+</p>
+<p>
+    The next two objects resp. object types we will describe are responsible for doing the ORM functionality:
+    persisting and finding.
+</p>
+
+<br />
+<h2>The Entity Manager</h2>
+<p>
+    To use ORM functionality, the <i>Entity Manager</i> (<code>Doctrine\ORM\EntityManager</code>) is the main access point to <i>Doctrine 2</i>. The entity manager is
+    responsible – as you might have guessed – for managing entities and for building a facade for the whole framework.
+    To accomplish its tasks, the entity manager uses some helpers. The <i>Unit of Work</i> object for example collects entities
+    that should be written back to the database and is capable of doing this in batches. This way, database operation
+    can be executed with almost no overhead and therefore are really fast.
+</p>
+<p>
+    Another dependency of the entity manager is the <i>Event Manager</i>. To be as extensible as possible, <i>Doctrine 2</i> comes
+    with an event system that publishes all important state changes to the outside as events. You can register for such
+    events and extend the life cycle of your entity objects at one single point.
+</p>
+<p>
+    The entity manager's <a href="http://www.doctrine-project.org/api/orm/2.0/doctrine/orm/entitymanager.html">API</a> combines methods for managing entities (<code>find</code>, <code>persist</code>, <code>contains</code>, <code>copy</code>, <code>detatch</code>, <code>merge</code>,
+    <code>remove</code> and <code>refresh</code>), methods that control the use of transations (<code>beginTransaction</code>, <code>commit</code>, <code>flush</code>, <code>rollback</code> and
+    <code>transactional</code>) and some helper methods for creating custom queries and accessing some of the entity manager's dependencies.
+</p>
+<p>
+    The following example shows how to query an object from the entity manager, modify it and write the changes back into
+    the database.
+</p>
+
+<br />
+<script src="https://gist.github.com/1430549.js?file=gistfile1.aw"></script>
+<br />
+
+<p>
+    Creating a new persistent object is almost as easy as modifying it:
+</p>
+
+<br />
+<script src="https://gist.github.com/1430548.js?file=gistfile1.aw"></script>
+<br />
+
+<br />
+<h2>Repositories</h2>
+<p>
+    For finding entities, <i>Repositories</i> are used. Every entity class has its own repository which is responsible for
+    finding entities of that type. By default, repositories have some handy methods for fetching entities that match certain criteria:
+    <ul>
+        <li><code>find</code>: Finds an entity by its primary key / identifier</li>
+        <li><code>findAll</code>: Finds all entities of the repository's entity type</li>
+        <li>
+            <code>findBy</code> / <code>findOneBy</code>: Finds all resp. one entity that matches the passed criteria:<br />
+            <script src="https://gist.github.com/1430546.js?file=gistfile1.txt"></script>
+        </li>
+        <li>
+            <code>findBy&lt;attribute&gt;</code> / <code>findOneBy&lt;attribute&gt;</code>: Magic methods that ease the filtering by a single attribute:<br />
+            <script src="https://gist.github.com/1430544.js?file=gistfile1.aw"></script>
+        </li>
+    </ul>
+</p>
+
+<p>
+    To access a repository, all you have to do is ask the entity manager for one. If you have implemented your own
+    repository, it will be returned by <code>Doctrine\ORM\EntityManager::getRepository()</code>. Otherwise, <i>Doctrine 2</i> will provide
+    a generic repository. The main reason to implement custom repository classes is to group custom queries for an entity
+    type to make them reusable. For custom query logic, there are several mechanisms you can use: You can either use
+    Doctrine's query builder that implements an API similar to <i>Zend_Db_Select</i> or queries written in the <i>Doctrine Query
+    Language</i> (<i>DQL</i>) or you can even execute plain SQL queries. With these options, it is also possible to migrate old
+    applications which use complex queries by just wrapping these queries into the methods of custom repositories.
+</p>
+
+<br />
+<h2>Proxies</h2>
+<p>
+    When traversing a graph of entity objects (which is required when entities are having relations to other entities),
+    it would be very expensive (in the sense of “requiring many database queries”) to fetch every depending entity with
+    an additional query. Therefore <i>Doctrine 2</i> uses the concept of <i>Proxy</i> objects that represent regular entity objects
+    which have not been populated with data from the database. Take a look at the following example where the entity
+    <code>Group</code> aggregates a list of <code>User</code> objects in its member property. When accessing the members list, <i>Doctrine 2</i> provides a
+    collection of proxy objects instead of complete <code>User</code> objects. When an object of this collection is being asked for
+    one of its properties, Doctrine loads the object's data from the database. This way, the users' data is not loaded
+    until it is really needed.
+</p>
+<br />
+<script src="https://gist.github.com/1430542.js?file=gistfile1.aw"></script>
+<br />
+<br />
+
+<h1>Advanced Mapping Concepts</h1>
+<p>
+    This section describes some advanced concepts that are required when mapping entity classes that have relationships to
+    other entity classes. Possible relationship types are association and inheritance. Inheritance is the mechanism used for
+    representing subtypes in object-oriented programming languages. An example would be a class <code>User</code> that implements
+    methods every user of a software should have and a class <code>Administrator</code> inheriting from <code>User</code> that adds methods for
+    determining the administrator's access rights.
+</p>
+<p>
+    Association is a weaker relation type. It means that an entity object can be related to other entity objects of other
+    types. In terms of relational databases, there are three types of association which differ in the number of entities
+    an object is related to: 1:1, 1:n and n:m relationships. n and m are placeholders and mean multiple.
+</p>
+
+<br />
+<h2>Association</h2>
+<p>
+    To put objects of an entity type into relation, you just have to mention this relation in the entity class' mapping
+    information. The simplest case is a unidirectional 1:1 relationship. In the following example we describe a <code>User</code> entity
+    which has its access information (user credentials) encapsulated into another entity class called <code>UserCredential</code>. Since
+    every user has at most one credential object and every credential object may only be associated to one user object,
+    this is a 1:1 relationship.
+</p>
+
+<br />
+<script src="https://gist.github.com/1430540.js?file=gistfile1.aw"></script>
+<br />
+
+<p>
+    If the relationship should be bidirectional, include the <code>OneToOne</code> attribute in the other class, too, and add an
+    attribute which denotes the attribute of the other entity that mapps the related object:
+</p>
+<br />
+<script src="https://gist.github.com/1430535.js?file=gistfile1.aw"></script>
+<br />
+<p>
+    This way, you can access the user object from the credentials object, too.<br \>
+    Most of the times, developers have to deal with relationships which include many objects on at least one side.
+    These relationships are called 1:n or n:m relationships. This means that either one or multiple entities are standing
+    in relationship with an arbitrary number of entities of another type. To accomplish this, you have to use the mapping
+    keywords <code>OneToMany</code> or <code>ManyToMany</code> when describing your entities. Besides that, the mapping works the exact same way as
+    with 1:1 relationships.
+</p>
+<p>
+    There are however some tricks you should know when dealing with collections of associated entity objects. Consider
+    the following relationship between the entity classes <code>User</code> and <code>Group</code>:
+</p>
+
+<br />
+<script src="https://gist.github.com/1430534.js?file=gistfile1.txt"></script>
+<br />
+
+<p>
+    When a group has at least one member, the group object will have a collection of the type
+    <code>Doctrine\Common\Collections\ArrayCollection</code> set as its members property. This collection contains
+    all user objects (or proxy objects as we have seen before) and can be modified intuitively with the methods <code>add</code> and
+    <code>removeElement</code>. To honor object-orientation, you might want to introduce custom methods for these tasks. If you do so,
+    you get into trouble when the group object does not have any users associated. In this case, the collection will simply be
+    set to null. To avoid checks whether the collection has already be initialized, you should to this by yourself
+    in the entity class' constructor:
+</p>
+
+<br />
+<script src="https://gist.github.com/1430532.js?file=gistfile1.aw"></script>
+<br />
+
+<p>
+    It is also important to notice that one entity has to update the other entity's state as well when a relationship
+    between to objects is created or removed. Take care to do this only in one class to avoid endless recursion loops!
+    This class is called the <i>Owning Side</i> of the relationship. When implementing a bidirectional relationship, the other
+    class is called the <i>Inverse Side</i>. It is important to determine owning and inverse side and implement the the classes
+    accordingly to avoid greater trouble during debugging.
+</p>
+<p>
+    There are some more features implemented by <i>Doctrine 2</i> enabling developers to specify their entities' relationships
+    including sorting, pre-fetching and indexing. These topics are not covered in this article but are explained very
+    understandable in the <a href="http://www.doctrine-project.org/docs/orm/2.1/en/reference/association-mapping.html"><i>Doctrine 2</i> documentation</a>.
+</p>
+
+<br />
+<h2>Inheritance</h2>
+<p>
+    Subtyping can be implemented in different ways using <i>Doctrine 2</i>. The main difference between these implementations
+    is how the inheritance is mapped to the database. The options are to have one table for every class (<i>Class Table Inheritance</i>),
+    to have one table for all classes in a hierarchy (<i>Single Table Inheritance</i>) and to have a table for every specialized
+    sub-class of a given super-class (<i>Mapped Super Class</i>).We will give a short overview on all three alternatives, you have
+    to pick the right one yourself. This decision should be made based on how many common attributes there are in your sub-classes.
+</p>
+
+<h3>Mapped Superclasses</h3>
+<p>
+    Introducing a mapped superclass is probably the easiest way for specifying inheritance but might lead to
+    many duplicate columns in your database schema. The superclass of your entities is not being declared as an entity
+    itself (and might also be declared abstract) but provides attributes and optionally methods that will be available
+    in all subclasses. When creating the database schema, <i>Doctrine 2</i> merges all attributes and relationships of the
+    superclass into the definitions of the subclasses and processes them as regular entities.
+</p>
+
+<br />
+<script src="https://gist.github.com/1430528.js?file=gistfile1.aw"></script>
+<br />
+
+<p>
+    After creating the database from this mapping information, your tables will look like this: <br />
+</p>
+
+<img src="http://blog.mayflower.de/uploads/PaulBlog/User-AdministratorusingaMappedSuperclass.png" />
+
+<h3>Single Table Inheritance</h3>
+<p>
+    When having entities that are very similar besides some few attributes, you might want to store them together in one
+    database table. This approach is called <i>Single Table Inheritance</i>. To distinguish between the different types, there is
+    always a column marked as discriminator column and a discriminator map that tells <i>Doctrine 2</i> which values in the
+    discriminator indicate what entity types.
+</p>
+
+<br />
+<script src="https://gist.github.com/1430523.js?file=gistfile1.txt"></script>
+<br />
+
+<p>
+    These definitions cause the existing of one single table called User with all the attributes declared inside the
+    classes User and Administrator plus a column type – the discriminator column. When working with entities of these
+    types, Doctrine will manage the type flag automatically for you.
+</p>
+<p>
+    The resulting database schema looks as illustrated by the following diagram:<br />
+</p>
+
+<img src="http://blog.mayflower.de/uploads/PaulBlog/User-AdministratorusingSingleTableInheritance.png" />
+
+<h3>Class Table Inheritance</h3>
+<p>
+    Having each entity type stored in its own table is always good for keeping your schema extensible. When you have to
+    create a new subtype, <i>Doctrine 2</i> will just create a new table for this type and it can inherit the logic and common
+    attributes of a superclass. The only overhead you have with this approach is that all tables that correspond to subtypes
+    have to maintain a relationship to their supertype's table. Using class table inheritance, the example with the entities
+    User and Administrator looks like this:
+</p>
+
+<br />
+<script src="https://gist.github.com/1430465.js?file=gistfile1.aw"></script>
+<br />
+
+<p>
+    Besides the inheritance type, there is no difference to the example using single table inheritance. The outcome on
+    the resulting database scheme is huge. Now you have to separate tables which store users and administrators. Every
+    record in the table Administrator has a corresponding record in the User table.
+</p>
+
+<img src="http://blog.mayflower.de/uploads/PaulBlog/User-Administratorusingclasstableinheritance.png" />
+
+<hr />
+
+<p>
+    This was the first part of this article. Stay tuned for part II which will be published tomorrow (on 6th of December 2011)! In the second part, we will integrate <i>Doctrine 2</i> into a <i>Zend Framework</i> application and include a generic sandbox (ZF-)project with <i>Doctrine 2</i>!
+</p>
