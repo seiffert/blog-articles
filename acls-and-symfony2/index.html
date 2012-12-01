@@ -1,0 +1,278 @@
+As most of the larger PHP frameworks do, Symfony2 contains a component that handles all kinds of security topics. Its primary two capabilities are authentication and authorization. While making it easy to implement these concepts, the component separates them and executes one after the other. In the first step the framework determines <i>who</i> the current user is resp. whether he is who he claims to be (Authentication), second it evaluates <i>whether he is allowed</i> to perform a certain operation (Authorization).
+
+This article is focused on authorization or more accurately on Symfony2's <i>Access Control Lists</i> (ACLs) and how they support the implementation of complex access right models.
+
+<h2>The Theoretical Background</h2>
+
+During authorization, a system decides whether the user may perform an operation on a specific object. All permissions, different users have in a system can be modelled on access control matrices. An <i>Access Control Matrix</i> (ACM) is a formalized notation for what I just described: 
+
+<ul>
+	<li>There are <i>subjects</i> that can perform operations.</li>
+ 	<li>There are <i>objects</i> which allow operations to be performed on them.</li>
+	<li>Per object there can be multiple <i>operations</i> which can be invoked by subjects.</li>
+</ul>
+
+The easiest way to think of ACMs: Each subject is represented by a row in a table, each object by a column. The actions a subject is allowed to perform on an object are listed in the table where the subject's row crosses the object's column.
+
+The following table is an example of an ACM that describes the access rights of users in a message board.
+
+<table class="table table-condensed table-hover">
+    <tr>
+        <th class="span1"></th>
+        <th>Thread X</th>
+        <th>Thread Y</th>
+        <th>Thread Z</th>
+        <th>User A</th>
+        <th>User B</th>
+        <th>User C</th>
+    </tr>
+    <tr>
+        <th>User A</th>
+        <td>read</td>
+        <td>read<br />write</td>
+        <td>read</td>
+        <td>read<br />write</td>
+        <td>read</td>
+        <td>read</td>
+    </tr>
+    <tr>
+        <th>User B</th>
+        <td>read<br />write</td>
+        <td>read</td>
+        <td>read<br />write<br />moderate</td>
+        <td>read</td>
+        <td>read<br />write</td>
+        <td>read</td>
+    </tr>
+    <tr>
+        <th>User C</th>
+        <td>read<br />write<br />moderate</td>
+        <td>read<br />write<br />moderate</td>
+        <td>read</td>
+        <td>read<br />write<br />delete</td>
+        <td>read<br />write<br />delete</td>
+        <td>read<br />write<br />delete</td>
+    </tr>
+</table>
+
+Columns can have different types: Both, threads and users are objects in this ACM, users are subjects as well. This means that there is the possibility for users to have access rights on other users. <i>User C</i> for example has a higher security clearance than <i>User A</i> and <i>User B</i> which gives him the right to administrate their accounts. 
+
+To implement access right models based on this schema, there are two major approaches: <i>Access Control Lists</i> (ACLs) and <i>Capabilities</i>. 
+
+<div class="well">
+    <strong>Note:</strong> Both, ACLs and Capability Lists are white lists. They are used to specify access rights, not access restrictions.
+</div>
+
+<h3>Access Control Lists (ACLs)</h3>
+	
+An ACL is basically just one column of the ACM. Hence, there is one ACL for each object that is subject to access right restrictions. Every entry (<i>Access Control Entry</i> - ACE) of an ACL references one subject and one or more operations. When a subject wants to perform a specific operation on an object, the security system just has to iterate over the object's ACL and look for an entry associated with the user (computational effort: <code class="badge">O(N)</code>, with N being the number of subjects in the system). If there is none or the entry does not contain the desired operation, access is denied. If there is an ACE which references the user and contains the operation, the user is allowed to continue.
+The biggest advantage of this model is that you can change access to an object easily by just altering its ACL. This will only take <code class="badge">O(N)</code> operations. On the other hand it is "expensive" to remote all access rights of one specific user or deny a certain action in the system completely. In these cases you would have to iterate over the whole ACM which leads to a computational complexity of <code class="badge">O(M&times;N)</code> (with M being the number of objects in the system).
+
+<h3>Capabilities</h3>
+
+The other popular approach to represent access rights are capability lists. In a capability-based system, not the columns of an ACM are stored with the ACMs objects, but its rows are stored with the subjects. If an access control system needs to provision subjects with access rights, this model introduces some advantages over ACLs regarding performance (<code class="badge">O(N)</code>). In a capability based system it is easier to pass capabilities between subjects or even groups of subjects. On the other hand, it is harder to change the rights to access a certain objects for multiple subjects (<code class="badge">O(M&times;N)</code>). In this case you have to search for all subjects that have capabilities associated with the object.
+
+<h2>Symfony2's Access Control Mechanism</h2>
+
+In Symfony2's security component, there are several classes that enable developers to implement ACLs easily. When using the full-stack framework with the <a href="https://github.com/symfony/SecurityBundle">SecurityBundle</a>, it is even easier to use ACLs since the bundle registers ACL related services in the service container. In the following I want to give some insights into managing ACLs and then show how access rights can be tested with it.
+
+For creating and altering ACLs, a <code>MutableAclProvider</code> is required. In the service container, this object is identified by the ID <code>security.acl.provider</code>. Once you retrieved a <code>MutableAclProvider</code> you can use its methods to find, create, update, and delete ACLs. Each of this methods requires an <code>ObjectIdentity</code> to identify the correct ACL. ACLs are not associated with objects directly but via an identity object (of type <code>ObjectIdentity</code>) which decouples the ACL implementation from the actual application logic.
+
+<h3>Retrieving an object's ACL</h3>
+
+To retrieve the ACL of a <code>Thread</code> object the method <code>findAcl</code> is used:
+
+<pre>
+<?php
+
+use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
+
+/** @var MyBundle\Entity\Thread */
+$thread = ...;
+
+$provider = $container->get('security.acl.provider');
+
+$acl = $provider->findAcl(ObjectIdentity::fromDomainObject($thread));
+</pre>
+
+<h3>Creating new ACLs</h3>
+
+For objects which do not have ACLs, you can create new ACLs using the same <code>MutableAclProvider</code>:
+
+<pre>
+<?php
+
+use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
+
+/** @var MyBundle\Entity\Thread */
+$thread = ...;
+$provider = $container->get('security.acl.provider');
+
+$acl = $provider->createAcl(ObjectIdentity::fromDomainObject($thread));
+</pre>
+
+<p>
+	In most cases, you will end up creating ACLs right after creating the corresponding objects. (If your objects are instances of Doctrine entities, make sure to persist the newly create objects and flush the <code>EntityManager</code> before trying to create ACLs for them!) Sometimes this is not possible and some objects already have ACLs associated while others don't. In this case you might want to use the following code to retrieve ACLs:
+
+<pre>
+<?php
+
+use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
+use Symfony\Component\Security\Acl\Exception;
+
+/** @var MyBundle\Entity\Thread */
+$thread = ...;
+$provider = $container->get('security.acl.provider');
+
+$objectIdentity = ObjectIdentity::fromDomainObject($thread);
+
+try {
+	$acl = $provider->findAcl($objectIdentity);
+} catch (AclNotFoundException $e) {
+	$acl = $provider->createAcl($objectIdentity);
+}
+</pre>
+
+<h3>Modifying ACLs</h3>
+
+To grant access to an operation of an object, you have to add an <i>Access Control Entry</i> to the object's ACL. Each ACE references one instance of a class that implements the <code>SecurityIdentityInterface</code>. This object references a subject and contains a <a href="http://en.wikipedia.org/wiki/Mask_(computing)">bitmask</a> that specifies which rights the subject has. In Symfony2 there are two default implementations of <code>SecurityIdentityInterface</code>: <code>UserSecurityInterface</code> and <code>RoleSecurityInterface</code>. As you might guess, the first one identifies a user object and the latter one a role. Hence, access rights can be provided to a single user as well as to all users which have a certain role.
+The concept of security identities might sound like additional overhead but it's actually a very handy abstraction: it enables you to implement new types of subjects just by creating a new security identity. There might for example be a <code>GroupSecurityIdentity</code> which allows administrators to grant access to a whole group of users (groups and roles aren't the same thing!).
+
+<h4>Adding ACEs</h4>
+
+Now, I want to show you how simple it is enable a single user to view a <code>Thread</code>:
+
+<pre>
+<?php
+    
+use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
+use Symfony\Component\Security\Acl\Domain\UserSecurityIdentity;
+use Symfony\Component\Security\Acl\Permission\MaskBuilder;
+
+/** @var MyBundle\Entity\User */
+$thread = ...;
+
+/** @var Symfony\Component\Security\Core\User\UserInterface */
+$user = ...;
+
+$aclProvider = $this->container->get('security.acl.provider');
+
+$acl = $aclProvider->findAcl(ObjectIdentity::fromDomainObject($thread));
+$securityId = UserSecurityIdentity::fromAccount($user);
+
+$acl->insertObjectAce($securityId, MaskBuilder::MASK_VIEW);
+$aclProvider->updateAcl($acl);
+</pre>
+
+The call <code>MutableAclProvider::updateAcl</code> is very important - before that, the updated ACL is not written into the ACL's backend (which is a database by default).
+
+If an user should be allowed to perform multiple operations on an object, you will have to create the bitmask using the <code>MaskBuilder</code>:
+
+<pre>
+<?php
+
+use Symfony\Component\Security\Acl\Permission\MaskBuilder;
+
+$maskBuilder = new MaskBuilder();
+$maskBuilder->add(MaskBuilder::MASK_VIEW);
+$maskBuilder->add(MaskBuilder::MASK_EDIT);
+$mask = $maskBuiler->get();
+
+... 
+
+$acl->insertObjectAce($securityId, $mask);
+</pre>
+
+<h4>Updating ACEs</h4>
+
+To alter an ACE after it has been inserted into an ACL, you first have to retrieve it from the ACL, then modify its bitmask and finally update the ACL:
+
+<pre>
+<?php
+
+use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
+use Symfony\Component\Security\Acl\Domain\UserSecurityIdentity;
+use Symfony\Component\Security\Acl\Permission\MaskBuilder;
+
+/** @var MyBundle\Entity\Thread */
+$thread = ...;
+
+/** @var Symfony\Component\Security\Core\User\UserInterface */
+$user = ...;
+
+$acl = $provider->findAcl(ObjectIdentity::fromDomainObject($thread));
+$securityId = UserSecurityIdentity::fromAccount($user);
+
+foreach($acl->getObjectAces() as $ace) {
+	if ($ace->getSecurityIdentity()->equals($securityId)) {
+		$maskBuilder = new MaskBuilder($ace->getMask());
+
+		$maskBuilder->remove(MaskBuilder::MASK_EDIT);
+
+		$ace->setMask($maskBuilder->get());
+		break;
+	}
+}
+
+$provider->updateAcl($acl);
+</pre>
+
+<div class="well">
+    I won't explain how to remove a specific ACE from an ACL, as I think this is pretty easy after having a quick look at the provided interfaces.
+</div>
+
+Now you know how to grant subjects the rights to access objects using ACLs. Next we should discuss how to test whether a user is allowed to perform the operation he requested.
+
+<h3>Checking Access</h3>
+
+Testing whether a user may perform an action he requested is pretty trivial. Wherever you need to do this, you will need access to the current <code>SecurityContext</code>. If you are working with the Dependency Injection Container, you simply have to make it inject the service <code>@security.context</code> into your class.
+
+With the <code>SecurityContext</code> at hand, you just ask it whether the current user is allowed to perform an action like this:
+
+<pre>
+<?php
+
+/** @var Symfony\Component\Security\Core\SecurityContextInterface */
+$securityContext = ...;
+
+/** @var MyBundle\Entity\Thread */
+$thread = ...;
+
+if (false === $securityContext->isGranted('VIEW', $thread)) {
+    throw new AccessDeniedException();
+}
+
+</pre>
+
+<h2>Further Reading</h2>
+
+Symfony2 provides several advanced concepts that are worth studying. I urge you to do so and desist from implementing your own security mechanisms. 
+
+<ul>
+    <li>
+        Symfony Cookbook: <a href="http://symfony.com/doc/2.0/cookbook/security/acl_advanced.html">How to use Advanced ACL Concepts</a>
+    </li>
+    <li>
+        Symfony2 Findings: <a href="http://rryter.blogspot.nl/2012/02/symfony2-and-acls.html">Symfony2 and ACLs</a>
+    </li>
+    <li>
+        Matthias Noback: <a href="http://php-and-symfony.matthiasnoback.nl/2012/09/symfony2-introduction-to-the-security-component-part-iii/">Introduction to the Security Component Part III</a>
+    </li>
+    <li>
+        Johannes Schmitt: <a href="https://speakerdeck.com/schmittjoh/security-and-aop-in-symfony2">Security and AOP in Symfony2</a> - Slides from Symfony Live 2012 Berlin
+    </li>
+</ul>
+
+<h2>References:</h2>
+
+<ul>
+	<li>
+	    Mark S. Miller, Ka-Ping Yee, Jonathan Shapiro: <a href="http://www.erights.org/elib/capability/duals/myths.htm"><strong>Capability Myths Demolished</strong></a>
+	</li>
+	<li>
+	    Ross J. Anderson: <a href="http://www.amazon.de/Security-Engineering-Building-Dependable-Distributed/dp/0470068523/ref=sr_1_1?ie=UTF8&qid=1348418533&sr=8-1"><strong>Security Engineering: A Guide to Building Dependable Distributed Systems</strong></a>
+    </li>
+	<li>
+	    Symfony Cookbook: <a href="http://symfony.com/doc/master/cookbook/security/acl.html"><strong>How to use Access Control Lists (ACLs)</stong></a>
+	</li>
+</ul>
