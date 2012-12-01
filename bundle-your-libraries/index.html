@@ -1,0 +1,139 @@
+In vielen Software-Projekten kommen Entwickler irgendwann an einen Punkt, an dem Funktionalität implementiert wird, die in anderen Projekten wiederverwendet werden können soll. Nachdem ich in der jüngeren Vergangenheit von mehreren Kollegen gefragt wurde, wie man dies in Symfony2-Projekten bewerkstelligen kann, wollte ich schriftlich eine Zusammenfassung der wichtigsten Punkte bereitstellen. Das Resultat ist dieser Blog-Artikel, der eine Schritt-für-Schritt-Anleitung enthält, wie man wiederverwendbaren Code kapselt und in einem eigenen Symfony2-Bundle bereitstellt.
+
+Das Wissen, welches ich hier verpacke, habe ich teils aus der Symfony2-Dokumentation, teils aus der Erfahrung, welche ich in den letzten Jahren in Symfony2-Projekten gesammelt habe. Nachdem ich des Öfteren Library-Code aus Projekten ausgelagert hatte, konnte ich einige Patterns identifizieren und vor allem feststellen, dass diese Vorgehensweisen in Symfony2-Projekten (abgesehen von syntaktischen Eigenheiten) denen in beliebigen anderen Umgebungen sehr stark ähneln.
+
+Die folgende Liste ist als Template zu verstehen, welches in einfachen Projekten genau so verwendet werden kann, in komplexeren jedoch wahrscheinlich erweitert werden muss.
+
+<ol>
+    <li>
+        <strong>Werde Dir darüber klar, welche Teile wirklich wiederverwendbar werden sollen.</strong>
+        Zu oft findet man "Libraries", die so "generisch" geschrieben sind, dass sie genau in einem Projekt Anwendung finden. Gute Libraries konzentrieren sich darauf, entweder genau eine Funktionalität oder eine API für eine externe Abhängigkeit bereitzustellen.
+
+    </li>
+    <li>
+        <strong>Definiere alle in Punkt 1 identifizierten Klassen als Services.</strong>
+        An allen Stellen, an denen solche Klassen verwendet werden, sollten sie per Dependency Injection bereitgestellt werden. Eine Ausnahme stellen Value-Objects dar. Diese können beispielsweise durch eine Factory (welche wiederum als Service definiert ist) erzeugt werden.
+        Der Sinn dieses Schritts ist es, die Schnittstellen zu der Library-Funktionalität explizit zu machen. Dies ist als Vorbereitung für das Verschieben des Codes notwendig.
+
+    </li>
+    <li>
+        <strong>Erstelle das neue Bundle</strong>
+        Erstelle jetzt ein neues Bundle im Ordner <code>src</code>, in dem der Library-Code später unterkommt:
+        <pre>
+            ./app/console generate:bundle
+        </pre>
+        Im Folgenden bezeichne ich das neue Bundle <i>LibraryBundle</i> und das ursprüngliche, in dem das restliche Symfony2-Projekt lebt <i>ProjectBundle</i>.
+
+    </li>
+    <li>
+        <strong>Verschiebe den Quellcode in das <i>LibraryBundle</i></strong>
+        Jetzt musst Du den in Punkt 1 identifizierten Code in das <i>LibraryBundle</i> verschieben. Danach müssen die Service-Definitionen der umgezogenen Klassen aus dem <i>ProjektBundle</i> in das <i>LibraryBundle</i> umgezogen werden. Wenn sich dadurch die Namen der Services ändern, müssen im <i>ProjectBundle</i> die Referenzen angepasst werden.
+    </li>
+    <li>
+        <strong>Zwischenziel:</strong>
+        Das Projekt sollte zu diesem Zeitpunkt ohne Einschränkung funktionieren! (Wo sind Deine Tests?)
+
+    </li>
+    <li>
+        <strong>Erstelle ein neues Git-Repository für das <i>LibraryBundle</i></strong>
+        Als Name eignet sich <code><vendor-name>-<bundle-kurzname></code>-bundle" oder <code><vendor-name>/<bundle-kurzname></code>-bundle".
+    </li>
+    <li>
+        <strong>Verschiebe den Code des <i>LibraryBundle</i>s in das neue Repository</strong>
+        Verschiebe alle Dateien und Ordner aus dem <i>LibraryBundle</i> in das neue Repository.
+        <pre>
+            mv src/Mein/LibraryBundle/* /pfad/zum/neues/repository/
+        </pre>
+
+    </li>
+    <li>
+        <strong>Composer-Support für das <i>LibraryBundle</i></strong>
+        Zusätzlich muss das neue Repository noch eine eigene <code>composer.json</code> (und am besten eine <code>README.md</code>) bekommen:
+        <pre>
+            {
+                "name": "paul/library-bundle",
+                "description": "Das ist mein neues LibraryBundle.",
+                "autoload": {
+                    "psr-0": { "Paul\\LibraryBundle": "" }
+                },
+                "target-dir": "Paul/LibraryBundle",
+                "require": {
+                    "php": ">=5.3.3",
+                    "symfony/symfony": "2.1.*"
+                }
+            }
+        </pre>
+        Die Einträge unter <code>autoload</code> und <code>target-dir</code> sorgen dafür, dass die Klassen im neuen Bundle zuerst an die richtige Stelle im Verzeichnis <code>vendor</code> installiert werden und dann richtig am Autoloader registriert werden. 
+        
+        Damit ist das neue Repository erst einmal fertig. Im Projekt-Repository kann man jetzt alle Überreste des <i>LibraryBundle</i>s entfernen.
+        <pre>
+            rm -fr src/Mein/LibraryBundle
+        </pre>
+
+    </li>
+    <li>
+        <strong>Veröffentlichen des <i>LibraryBundle</l>s</strong>
+        Das neue Repository kann jetzt an einem öffentlichen Ort (warum nicht <a href="http://github.com/">GitHub</a>?) veröffentlicht werden.
+        
+        <pre>
+            cd /pfad/zum/neuen/repository
+            git add .
+            git commit -m "Initial commit"
+            git add remote origin git@github.com:<YourName/Repository-Name>.git
+            git push origin master
+        </pre>
+        
+        Wenn das Paket öffentlich sichtbar (nicht nur in der eigenen Organisation) sein darf, kann an dieser Stelle ein Projekt auf <a href="http://packagist.org/">Packagist</a> erstellt werden.
+
+    </li>
+    <li>
+        <strong>Einbinden des <i>LibraryBundle</i>s im Projekt</strong>
+        Damit das <i>LibraryBundle</i> per Composer installiert werden kann, muss es noch in der <code>composer.json</code> des Projekt-Repositorys registrieren.
+        
+        Wenn das <i>LibraryBundle</i> nicht auf Packagist veröffentlicht wurde, muss ein custom Repository definiert werden:
+        <pre>
+            "require": {
+                ...
+                "paul/library-bundle": "*",
+        		...
+            },
+        	...
+
+            "repositories": [
+                {
+                    "type": "git",
+                    "url": "git@github.com:Paul/library-bundle.git"
+                },
+        		...
+            ],
+            ...
+        </pre>
+        
+        Wenn man jetzt im Projekt-Repository noch <code>composer update</code> ausführt, wird das <i>LibraryBundle</i> im Verzeichnis <code>vendor</code> installiert. 
+
+    </li>
+</ol>
+
+<h3>Herzlichen Glückwunsch!</h3>
+
+Deine Library-Funktionalität ist nun vollständig in ein eigenes Bundle und Repository ausgelagert! Dein Projekt sollte genauso funktionsfähig sein wie vor dem Umbau! (Ansonsten solltest du jetzt überlegen, einen Kommentar zu diesem Artikel zu hinterlassen!)
+
+<h3>Schlussbemerkungen</h3>
+
+Lagere Library-Funktionalität am besten erst aus, wenn sie für den Moment fertig und getestet ist. Wenn der Code noch im Entwicklungs-Stadium ist, solltest du noch abwarten. Das Problem ist, dass Änderungen im Library-Repository committet/gepusht werden müssen und danach das Project-Repository per composer aktualisiert werden muss, nur um eine kleine Änderung im <i>LibraryBundle</i> im Kontext testen zu können.
+
+Wenn du Code im <i>LibraryBundle</i> ändern musst, kannst du die Änderungen direkt auch im Ordner <code>vendor/Mein/LibraryBundle</code> vornehmen. In diesem Ordner liegt ein Clone des Library-Repositorys, in dem du auch committen und pushen kannst! Somit kann man das Problem des vorherigen Abschnitts umgehen. (Über die Sauberkeit dieser Vorgehensweise möchte ich an dieser Stelle jedoch kein Urteil fällen.)
+
+Ein paar Wegweiser zur weiteren Lektüre:
+
+<ul>
+    <li>
+        <strong>Service-Konfiguration:</strong> <a href="http://symfony.com/doc/current/book/service_container.html">Symfony Book Link</a>
+    </li>
+    <li>
+        <strong>Konfiguration von Bundles:</strong> <a href="http://symfony.com/doc/current/cookbook/bundles/extension.html">Symfony Cookbook Link</a>
+    </li>
+    <li>
+        <strong>Custom Repositories mit Composer:</strong> <a href="http://getcomposer.org/doc/05-repositories.md">Composer Dokumentation Link</a>
+    </li>
+</ul>
