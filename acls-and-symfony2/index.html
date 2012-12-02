@@ -217,6 +217,10 @@ foreach($acl->getObjectAces() as $ace) {
 $provider->updateAcl($acl);
 </pre>
 
+Let me show you one ACL from the example ACM in the beginning modelled on Symfony2 ACLs. The following object diagram visualizes the object graph resulting from implementing the access rights for <code>Thread X</code> as ACL.
+
+<a href="https://blog.mayflower.de/wp-content/uploads/2012/12/ACL-ObjectDiagram.png"><img src="https://blog.mayflower.de/wp-content/uploads/2012/12/ACL-ObjectDiagram.png" alt="" title="ACL ObjectDiagram" width="785" height="478" class="alignnone size-full wp-image-1974" /></a>
+
 <div class="well">
     I won't explain how to remove a specific ACE from an ACL, as I think this is pretty easy after having a quick look at the provided interfaces.
 </div>
