@@ -75,3 +75,11 @@ There are a lot of good puppet tutorials and examples on the internet which expl
 I recently found a [discussion on Github](https://github.com/symfony/symfony-standard/pull/407) about offering a simple way for Symfony2 developers to start new projects. The idea is to extend the framework's standard [distribution](http://symfony.com/distributions) by adding a default vagrant/puppet configuration. I don't really like the idea of putting this into the standard edition, but making something easier is always good! So I started helping out on a [project](https://github.com/ericclemmons/ECVagrantBundle) that uses a different approach: It provides Symfony2 console commands that can generate and configure a vagrant/puppet environment for a project. 
 
 My aim is to bring this bundle to a point where you can configure a whole environment interactively with just one console command. Nevertheless, I like the idea of a very simplistic configuration that is included in a Symfony2 distribution. Developers that are new to Symfony2 would just have to run two console commands (`composer create-project the-new-symfony-distribution` and `vagrant up`) to set up a new virtual machine with their newly created project up and running! With these two solutions at hand, beginning new projects would be a matter of minutes. 
+
+## References
+
+- [Pull-Request by @chregu](https://github.com/symfony/symfony-standard/pull/407)
+- [Pull-Request by @ericclemons](https://github.com/symfony/symfony-standard/pull/423)
+- [ECVagrantBundle by @ericclemons](https://github.com/ericclemmons/ECVagrantBundle)
+- [Vagrant Docs](http://vagrantup.com/v1/docs/index.html)
+- [Puppet Docs](http://docs.puppetlabs.com/#puppetpuppet)
