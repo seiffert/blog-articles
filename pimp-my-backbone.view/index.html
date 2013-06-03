@@ -9,7 +9,7 @@
 
 <p>
     <em>React</em> has some interesting concepts for JavaScript view objects that can be used to eliminate one problem of <em>Backbone.js</em>.<br />
-    As in most MVC implementations (although React is mostly just a <i>V</i> implementation), a view is one portion of the screen that is managed by a controlling object. This object is responsible for deciding when to re-render the view and how to react to user input. With <em>React</em>, these portions are defined as components. A component knows how to render the view it represents and how to react to user input (mouse, keyboard, touch, ... events). The interesting thing is that <em>React</em> is figuring out by itself when to re-render a view and how to do this in the most efficient way. Let's have a look at <a href="https://github.com/seiffert/blog-articles/pimp-my-backbone.view/tree/master/examples/todolist-react">an example</a>:</p>
+    As in most MVC implementations (although React is mostly just a <i>V</i> implementation), a view is one portion of the screen that is managed by a controlling object. This object is responsible for deciding when to re-render the view and how to react to user input. With <em>React</em>, these portions are defined as components. A component knows how to render the view it represents and how to react to user input (mouse, keyboard, touch, ... events). The interesting thing is that <em>React</em> is figuring out by itself when to re-render a view and how to do this in the most efficient way. Let's have a look at <a href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-react">an example</a>:</p>
 
 <pre>
 /** @jsx React.DOM */
@@ -41,7 +41,7 @@ React.renderComponent(<TodoList />, document.body);
 </p>
 
 <p>
-    So far, you haven't seen more code than required to render a simple list. However, the simplicity of this short snippet gives you a good idea of the rest of the framework - it's really not much more than that. The same functionality implemented with <em>Backbone.js</em> would look somewhat <a href="https://github.com/seiffert/blog-articles/pimp-my-backbone.view/tree/master/examples/todolist-backbone">like this</a>:
+    So far, you haven't seen more code than required to render a simple list. However, the simplicity of this short snippet gives you a good idea of the rest of the framework - it's really not much more than that. The same functionality implemented with <em>Backbone.js</em> would look somewhat <a href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-backbone">like this</a>:
 </p>
 
 <pre>
@@ -265,16 +265,16 @@ require(['backbone', 'app', 'jsx!router'], function(Backbone, app, Router) {
 
 <p>As you can see, I did not only update the <code>require.config</code> part of our main script, but also added the initialization of our <code>Router</code>. The important part here is that when specifying the dependencies of our main script, we reference the router with <code>'jsx!router'</code>. This tells require.js to use the <em>JSX</em> plugin to load the file <code>router.js</code>.</p>
 
-<p>The resulting application can be found in the mentioned <a href="https://github.com/seiffert/blog-articles/pimp-my-backbone.view/tree/master/examples/todolist-reactive-backbone">repository on GitHub in the demo directory</a>.</p>
+<p>The resulting application can be found in the mentioned <a href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-reactive-backbone">repository on GitHub in the demo directory</a>.</p>
 
 <h3 id="code">Code</h3>
 
 <p>If you want to compare the three different approaches used to render this simple Todo list, have a look at the code:</p>
 
 <ul>
-<li><a href="https://github.com/seiffert/blog-articles/pimp-my-backbone.view/tree/master/examples/todolist-react">Todos with React</a></li>
-<li><a href="https://github.com/seiffert/blog-articles/pimp-my-backbone.view/tree/master/examples/todolist-backbone">Todos with Backbone.JS</a></li>
-<li><a href="https://github.com/seiffert/blog-articles/pimp-my-backbone.view/tree/master/examples/todolist-reactive-backbone">Todos with Reactive Backbone</a></li>
+<li><a href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-react">Todos with React</a></li>
+<li><a href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-backbone">Todos with Backbone.JS</a></li>
+<li><a href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-reactive-backbone">Todos with Reactive Backbone</a></li>
 </ul>
 
 <p>Hopefully, this article was able to highlight the benefits of combining React and Backbone.JS and convince you to give it a try. If you have any questions or want to give me feedback, feel free to add a comment or contact me via <a href="https://twitter.com/SeiffertP">Twitter</a>.</p>
