@@ -5,11 +5,11 @@
 
 <h2 id="react_pragmatically">React pragmatically</h2>
 
-<p>A few days ago, Facebook and Instagram published a JavaScript framework of theirs: <a href="http://facebook.github.io/react"><em>React</em></a>.</p>
+<p>A few days ago, Facebook and Instagram published a JavaScript framework of theirs: <a target="_blank" href="http://facebook.github.io/react"><em>React</em></a>.</p>
 
 <p>
     <em>React</em> has some interesting concepts for JavaScript view objects that can be used to eliminate one problem of <em>Backbone.js</em>.<br />
-    As in most MVC implementations (although React is mostly just a <i>V</i> implementation), a view is one portion of the screen that is managed by a controlling object. This object is responsible for deciding when to re-render the view and how to react to user input. With <em>React</em>, these portions are defined as components. A component knows how to render the view it represents and how to react to user input (mouse, keyboard, touch, ... events). The interesting thing is that <em>React</em> is figuring out by itself when to re-render a view and how to do this in the most efficient way. Let's have a look at <a href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-react">an example</a>:</p>
+    As in most MVC implementations (although React is mostly just a <i>V</i> implementation), a view is one portion of the screen that is managed by a controlling object. This object is responsible for deciding when to re-render the view and how to react to user input. With <em>React</em>, these portions are defined as components. A component knows how to render the view it represents and how to react to user input (mouse, keyboard, touch, ... events). The interesting thing is that <em>React</em> is figuring out by itself when to re-render a view and how to do this in the most efficient way. Let's have a look at <a target="_blank" href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-react">an example</a>:</p>
 
 <pre>
 /** @jsx React.DOM */
@@ -37,11 +37,11 @@ React.renderComponent(<TodoList />, document.body);
 </pre>
 
 <p>
-    This short snippet of code is defining two view components: <code>TodoListItem</code> and <code>TodoList</code>. Every time a <code>TodoList</code> is created, it is equipped with a default todo (I have to remind myself of this every day!) and when being rendered, the list delegates the rendering of the todos to the <code>TodoListItem</code> component. It then places them in a new <code><div></code> element. You might think that this is some kind of pseudocode - it's not! This is JavaScript with <em>JSX</em> which is being transformed to pure JavaScript before being executed. If you want to learn more about it, have a look at [React's documentation](http://facebook.github.io/react/docs/syntax.html) - it's really simple to get started!
+    This short snippet of code is defining two view components: <code>TodoListItem</code> and <code>TodoList</code>. Every time a <code>TodoList</code> is created, it is equipped with a default todo (I have to remind myself of this every day!) and when being rendered, the list delegates the rendering of the todos to the <code>TodoListItem</code> component. It then places them in a new <code>&lt;div&gt;</code> element. You might think that this is some kind of pseudocode - it's not! This is JavaScript with <em>JSX</em> which is being transformed to pure JavaScript before being executed. If you want to learn more about it, have a look at [React's documentation](http://facebook.github.io/react/docs/syntax.html) - it's really simple to get started!
 </p>
 
 <p>
-    So far, you haven't seen more code than required to render a simple list. However, the simplicity of this short snippet gives you a good idea of the rest of the framework - it's really not much more than that. The same functionality implemented with <em>Backbone.js</em> would look somewhat <a href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-backbone">like this</a>:
+    So far, you haven't seen more code than required to render a simple list. However, the simplicity of this short snippet gives you a good idea of the rest of the framework - it's really not much more than that. The same functionality implemented with <em>Backbone.js</em> would look somewhat <a target="_blank" href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-backbone">like this</a>:
 </p>
 
 <pre>
@@ -147,18 +147,18 @@ list.$el.appendTo(document.body);
 <h2 id="react_amd">React AMD</h2>
 
 <p>
-    There still exists one problem when mixing <em>Backbone.JS</em> code and <em>React</em> code: Although the <em>React</em> sources itself can be loaded with an <em>AMD</em> loader (like <a href="http://requirejs.org"><em>require.js</em></a>), the code written for the use with <em>React</em> contains these weird-looking snippets I explained to be <em>JSX</em>. Without an <em>AMD</em> loader this is not a problem: <em>JSX</em> source code is included in script tags with a specific type (<code><script type="text/jsx">...</script></code>). Scripts with this type are being detected by a the <code>JXSTransformer</code> which translates the <em>JSX</em> source code into pure JavaScript. If you know how <em>require.js</em> works, you can now figure out what the problem is.
+    There still exists one problem when mixing <em>Backbone.JS</em> code and <em>React</em> code: Although the <em>React</em> sources itself can be loaded with an <em>AMD</em> loader (like <a target="_blank" href="http://requirejs.org"><em>require.js</em></a>), the code written for the use with <em>React</em> contains these weird-looking snippets I explained to be <em>JSX</em>. Without an <em>AMD</em> loader this is not a problem: <em>JSX</em> source code is included in script tags with a specific type (<code><script type="text/jsx">...</script></code>). Scripts with this type are being detected by a the <code>JXSTransformer</code> which translates the <em>JSX</em> source code into pure JavaScript. If you know how <em>require.js</em> works, you can now figure out what the problem is.
 </p>
 
 <p>
-    For every module you load with <em>require.js</em>, a new <code>&lt;script&gt;</code> tag is added to the <code><head></code> of your HTML document. Sadly, it is not possible to specify the <code>type</code> of each of these <code>&lt;script&gt;</code> tags. To be able to load JXS source files with <em>require.js</em>, we have to use some other approach. The problem reminded me of the case in which a file you load via require does not pure JavaScript code either - <strong>templates</strong>. The default method to load templates with <em>require.js</em> is to use the <em>text</em> plugin. Therefore I had a look at how plugins work and whether it might be possible to load <em>JSX</em> code with a plugin, transform it in the client, and execute the resulting JavaScript code afterwards. What I came up with is now available on <a href="https://github.com/seiffert/require-jsx">GitHub</a> and can be used for exactly this use case.
+    For every module you load with <em>require.js</em>, a new <code>&lt;script&gt;</code> tag is added to the <code><head></code> of your HTML document. Sadly, it is not possible to specify the <code>type</code> of each of these <code>&lt;script&gt;</code> tags. To be able to load JXS source files with <em>require.js</em>, we have to use some other approach. The problem reminded me of the case in which a file you load via require does not pure JavaScript code either - <strong>templates</strong>. The default method to load templates with <em>require.js</em> is to use the <em>text</em> plugin. Therefore I had a look at how plugins work and whether it might be possible to load <em>JSX</em> code with a plugin, transform it in the client, and execute the resulting JavaScript code afterwards. What I came up with is now available on <a target="_blank" href="https://github.com/seiffert/require-jsx">GitHub</a> and can be used for exactly this use case.
 </p>
 
 <p>Now that we can load source files containing <em>JSX</em> code, we can finally combine <em>Backbone.js</em> and <em>React</em>.</p>
 
 <h2 id="reactive_backbone">Reactive Backbone</h2>
 
-<p>First, we need to set up a little <em>Backbone.js</em> application just like we would do without <em>React</em>. Whether you do this with <a href="http://yeoman.io"><em>Yeoman</em></a>, just <a href="http://bower.io/"><em>Bower</em></a>, or manually doesn't really matter. You will end up with an html document similar to this one</p>
+<p>First, we need to set up a little <em>Backbone.js</em> application just like we would do without <em>React</em>. Whether you do this with <a target="_blank" href="http://yeoman.io"><em>Yeoman</em></a>, just <a target="_blank" href="http://bower.io/"><em>Bower</em></a>, or manually doesn't really matter. You will end up with an html document similar to this one</p>
 
 <pre>
 <!DOCTYPE html>
@@ -223,10 +223,10 @@ define(['backbone', 'react', 'jsx!view/todoList'], function (Backbone, React, To
 });
 </pre>
 
-<p>If we would try to load this file with the default require.js mechanism, we would probably get an <code>Uncaught SyntaxError: Unexpected token <</code>. Now we need to use the above mentioned require.js plugin:</p>
+<p>If we would try to load this file with the default require.js mechanism, we would probably get an <code>Uncaught SyntaxError: Unexpected token <</code>. Now we need to use the above mentioned <em>require.js</em> plugin:</p>
 
 <ol>
-<li>Get it from <a href="https://github.com/seiffert/require-jsx">here</a></li>
+<li>Get it from <a target="_blank" href="https://github.com/seiffert/require-jsx">here</a></li>
 <li>Put it into your JavaScript directory</li>
 <li><p>Update your require.js configuration in a way that it can find the plugin and React</p>
 
@@ -265,16 +265,16 @@ require(['backbone', 'app', 'jsx!router'], function(Backbone, app, Router) {
 
 <p>As you can see, I did not only update the <code>require.config</code> part of our main script, but also added the initialization of our <code>Router</code>. The important part here is that when specifying the dependencies of our main script, we reference the router with <code>'jsx!router'</code>. This tells require.js to use the <em>JSX</em> plugin to load the file <code>router.js</code>.</p>
 
-<p>The resulting application can be found in the mentioned <a href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-reactive-backbone">repository on GitHub in the demo directory</a>.</p>
+<p>The resulting application can be found in the mentioned <a target="_blank" href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-reactive-backbone">repository on GitHub in the demo directory</a>.</p>
 
 <h3 id="code">Code</h3>
 
 <p>If you want to compare the three different approaches used to render this simple Todo list, have a look at the code:</p>
 
 <ul>
-<li><a href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-react">Todos with React</a></li>
-<li><a href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-backbone">Todos with Backbone.JS</a></li>
-<li><a href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-reactive-backbone">Todos with Reactive Backbone</a></li>
+<li><a target="_blank" href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-react">Todos with React</a></li>
+<li><a target="_blank" href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-backbone">Todos with Backbone.JS</a></li>
+<li><a target="_blank" href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-reactive-backbone">Todos with Reactive Backbone</a></li>
 </ul>
 
-<p>Hopefully, this article was able to highlight the benefits of combining React and Backbone.JS and convince you to give it a try. If you have any questions or want to give me feedback, feel free to add a comment or contact me via <a href="https://twitter.com/SeiffertP">Twitter</a>.</p>
+<p>Hopefully, this article was able to highlight the benefits of combining React and Backbone.JS and convince you to give it a try. If you have any questions or want to give me feedback, feel free to add a comment or contact me via <a target="_blank" href="https://twitter.com/SeiffertP">Twitter</a>.</p>
