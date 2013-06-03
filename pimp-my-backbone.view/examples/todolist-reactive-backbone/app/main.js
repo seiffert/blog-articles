@@ -12,13 +12,6 @@ require.config({
         backbone: {
             deps: ["lodash", "jquery"],
             exports: "Backbone"
-        },
-        JSXTransformer: {
-            deps: ["react"],
-            exports: "JSXTransformer"
-        },
-        react: {
-            exports: "React"
         }
     }
 });
