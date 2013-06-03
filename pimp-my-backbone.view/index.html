@@ -1,0 +1,280 @@
+<p>
+    I've been using <em>Backbone.js</em> in a couple of projects now and my feelings about it are quite diverse. On the one hand, I like how it provides you with guidelines on how to structure your frontend code. Although splitting model and view is a very basic idea in software development, it also is very powerful. <em>Backbone.js</em> is of great help by providing collections which aggregate model instances and being able to sync these models via RESTful interfaces. On the other hand, it always (and I hope that it's not just me) seems to be a pain in the b*** to figure out the best way to implement a proper view lifecycle and to keep track of all registered event handlers. If you aren't careful when removing or even just re-rendering views, you can seriously 1. mess up event handling and 2. prevent proper garbage collection. If you are just a little sloppy, this leads to a slow frontend with an always increasing memory footprint.<br />
+    I'm not saying that <em>Backbone.js</em> is bad in handling UI events, just that you have to care about too many things that are common to most web applications.
+</p>
+
+<h2 id="react_pragmatically">React pragmatically</h2>
+
+<p>A few days ago, Facebook and Instagram published a JavaScript framework of theirs: <a href="http://facebook.github.io/react"><em>React</em></a>.</p>
+
+<p>
+    <em>React</em> has some interesting concepts for JavaScript view objects that can be used to eliminate one problem of <em>Backbone.js</em>.<br />
+    As in most MVC implementations (although React is mostly just a <i>V</i> implementation), a view is one portion of the screen that is managed by a controlling object. This object is responsible for deciding when to re-render the view and how to react to user input. With <em>React</em>, these portions are defined as components. A component knows how to render the view it represents and how to react to user input (mouse, keyboard, touch, ... events). The interesting thing is that <em>React</em> is figuring out by itself when to re-render a view and how to do this in the most efficient way. Let's have a look at <a href="https://github.com/seiffert/blog-articles/pimp-my-backbone.view/tree/master/examples/todolist-react">an example</a>:</p>
+
+<pre>
+/** @jsx React.DOM */
+var TodoListItem = React.createClass({
+    render: function () {
+        return <li>{this.props.todo.text}</li>;
+    }
+});
+
+var TodoList = React.createClass({
+    getInitialState: function () {
+        return { todos: [{ text: 'Dishes', dueDate: new Date() }] };
+    },
+
+    render: function () {
+        var todos = this.state.todos.map(function (todo) {
+            return <TodoListItem todo={todo} />;
+        });
+
+        return <ul>{todos}</ul>;
+    }
+});
+
+React.renderComponent(<TodoList />, document.body);
+</pre>
+
+<p>
+    This short snippet of code is defining two view components: <code>TodoListItem</code> and <code>TodoList</code>. Every time a <code>TodoList</code> is created, it is equipped with a default todo (I have to remind myself of this every day!) and when being rendered, the list delegates the rendering of the todos to the <code>TodoListItem</code> component. It then places them in a new <code><div></code> element. You might think that this is some kind of pseudocode - it's not! This is JavaScript with <em>JSX</em> which is being transformed to pure JavaScript before being executed. If you want to learn more about it, have a look at [React's documentation](http://facebook.github.io/react/docs/syntax.html) - it's really simple to get started!
+</p>
+
+<p>
+    So far, you haven't seen more code than required to render a simple list. However, the simplicity of this short snippet gives you a good idea of the rest of the framework - it's really not much more than that. The same functionality implemented with <em>Backbone.js</em> would look somewhat <a href="https://github.com/seiffert/blog-articles/pimp-my-backbone.view/tree/master/examples/todolist-backbone">like this</a>:
+</p>
+
+<pre>
+var TodoListItem = Backbone.View.extend({
+    tagName: 'li',
+
+    render: function () {
+        this.model.on('change', this.render, this);
+        this.model.on('remove', this.remove, this);
+
+        this.$el.html(this.model.get('text'));
+    },
+
+    remove: function () {
+        this.model.off(null, null, this);
+
+        Backbone.View.prototype.remove.apply(this, arguments);
+    }
+});
+
+var TodoList = Backbone.View.extend({
+    tagName: 'ul',
+
+    listItems: null,
+
+    initialize: function () {
+        this.listItems = {};
+    },
+
+    render: function () {
+        this.$el.empty();
+
+        this.removeListItems();
+
+        this.model.on('add', this.onTodoAdded, this);
+        this.model.on('reset', this.render, this);
+
+        this.model.each(function (todo) {
+            var listItem = this.getListItemForTodo(todo);
+
+            listItem.render();
+
+            this.$el.append(listItem.$el);
+        }, this);
+    },
+
+    remove: function () {
+        this.removeListItems();
+        this.model.off(null, null, this);
+
+        Backbone.View.prototype.remove.apply(this, arguments);
+    },
+
+    removeListItems: function () {
+        _.invoke(this.listItems, 'remove');
+    },
+
+    getListItemForTodo: function (todo) {
+        if (_.isUndefined(this.listItems[todo.text])) {
+            this.listItems[todo.text] = new TodoListItem({
+                model: todo
+            });
+        }
+
+        return this.listItems[todo.text];
+    },
+
+    onAddTodo: function (todo, collection) {
+        var index = collection.indexOf(todo),
+            listItem = this.getListItemForTodo(todo);
+
+        this.insertListItemAtIndex(listItem, index);
+    },
+
+    insertListItemAtIndex: function (listItem, index) {
+        var $list = this.$el;
+
+        if ($list.children().length < index) {
+            $list.append(listItem.$el);
+        } else {
+            $list.children().eq(index).prepend(listItem.$el);
+        }
+    }
+});
+
+var list = new TodoList({
+    model: new Backbone.Collection([
+        {
+            text: 'Dishes!',
+            dueDate: new Date()
+        }
+    ])
+});
+list.render();
+
+list.$el.appendTo(document.body);
+</pre>
+
+<p>
+    This is at least the best approach to a proper handling the view lifecycle I have come across. As you can see: all the logic for keeping model and view in sync can be omitted with React.
+</p>
+
+<h2 id="react_amd">React AMD</h2>
+
+<p>
+    There still exists one problem when mixing <em>Backbone.JS</em> code and <em>React</em> code: Although the <em>React</em> sources itself can be loaded with an <em>AMD</em> loader (like <a href="http://requirejs.org"><em>require.js</em></a>), the code written for the use with <em>React</em> contains these weird-looking snippets I explained to be <em>JSX</em>. Without an <em>AMD</em> loader this is not a problem: <em>JSX</em> source code is included in script tags with a specific type (<code><script type="text/jsx">...</script></code>). Scripts with this type are being detected by a the <code>JXSTransformer</code> which translates the <em>JSX</em> source code into pure JavaScript. If you know how <em>require.js</em> works, you can now figure out what the problem is.
+</p>
+
+<p>
+    For every module you load with <em>require.js</em>, a new <code>&lt;script&gt;</code> tag is added to the <code><head></code> of your HTML document. Sadly, it is not possible to specify the <code>type</code> of each of these <code>&lt;script&gt;</code> tags. To be able to load JXS source files with <em>require.js</em>, we have to use some other approach. The problem reminded me of the case in which a file you load via require does not pure JavaScript code either - <strong>templates</strong>. The default method to load templates with <em>require.js</em> is to use the <em>text</em> plugin. Therefore I had a look at how plugins work and whether it might be possible to load <em>JSX</em> code with a plugin, transform it in the client, and execute the resulting JavaScript code afterwards. What I came up with is now available on <a href="https://github.com/seiffert/require-jsx">GitHub</a> and can be used for exactly this use case.
+</p>
+
+<p>Now that we can load source files containing <em>JSX</em> code, we can finally combine <em>Backbone.js</em> and <em>React</em>.</p>
+
+<h2 id="reactive_backbone">Reactive Backbone</h2>
+
+<p>First, we need to set up a little <em>Backbone.js</em> application just like we would do without <em>React</em>. Whether you do this with <a href="http://yeoman.io"><em>Yeoman</em></a>, just <a href="http://bower.io/"><em>Bower</em></a>, or manually doesn't really matter. You will end up with an html document similar to this one</p>
+
+<pre>
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="/lib/bootstrap/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="/css/style.css" />
+    </head>
+    <body>
+        <script data-main="app/main" src="/lib/require.js"></script>
+    </body>
+</html>
+</pre>
+
+<p>and some JavaScript file (in our case the <code>app/main.js</code> script) that configures the application:</p>
+
+<pre>
+require.config({
+    deps: ["main"],
+    paths: {
+        jquery: "../lib/jquery-1.9.1",
+        lodash: "../lib/lodash.compat",
+        backbone: "../lib/backbone",
+        text: "../lib/text"
+    },
+    shim: {
+        backbone: {
+            deps: ["lodash", "jquery"],
+            exports: "Backbone"
+        }
+    }
+});
+
+require(['backbone', 'app'], function(Backbone, app) {
+  app.run();
+});
+</pre>
+
+<p>In the application's <code>run</code> method I would like to start <em>Backbone.js</em>' history and let a router control the application. In the router, I would then render view components. To be able to do this, the router needs to know about <em>React</em> and also contain some <em>JSX</em>:</p>
+
+<pre>
+define(['backbone', 'react', 'jsx!view/todoList'], function (Backbone, React, TodoList) {
+  return Backbone.Router.extend({
+    routes: {
+      '*default': 'defaultAction'
+    },
+
+    defaultAction: function () {
+      var todos = new Backbone.Collection([
+        {
+          text: 'Dishes!',
+          dueDate: new Date()
+        }
+      ]);
+
+      React.renderComponent(
+        <TodoList todos={todos} />,
+        document.body
+      );
+    }
+  });
+});
+</pre>
+
+<p>If we would try to load this file with the default require.js mechanism, we would probably get an <code>Uncaught SyntaxError: Unexpected token <</code>. Now we need to use the above mentioned require.js plugin:</p>
+
+<ol>
+<li>Get it from <a href="https://github.com/seiffert/require-jsx">here</a></li>
+<li>Put it into your JavaScript directory</li>
+<li><p>Update your require.js configuration in a way that it can find the plugin and React</p>
+
+<pre>require.config({
+    deps: ["main"],
+    paths: {
+        jquery: "../lib/jquery-1.9.1",
+        lodash: "../lib/lodash.compat",
+        backbone: "../lib/backbone",
+        jsx: "../lib/jsx",
+        JSXTransformer: '../lib/JSXTransformer',
+        react: '../lib/react'
+    },
+    shim: {
+        backbone: {
+            deps: ["lodash", "jquery"],
+            exports: "Backbone"
+        },
+        JSXTransformer: {
+            deps: ["react"],
+            exports: "JSXTransformer"
+        },
+        react: {
+            exports: "React"
+        }
+    }
+});
+
+
+require(['backbone', 'app', 'jsx!router'], function(Backbone, app, Router) {
+    app.router = new Router();
+    app.run();
+});
+</pre></li>
+</ol>
+
+<p>As you can see, I did not only update the <code>require.config</code> part of our main script, but also added the initialization of our <code>Router</code>. The important part here is that when specifying the dependencies of our main script, we reference the router with <code>'jsx!router'</code>. This tells require.js to use the <em>JSX</em> plugin to load the file <code>router.js</code>.</p>
+
+<p>The resulting application can be found in the mentioned <a href="https://github.com/seiffert/blog-articles/pimp-my-backbone.view/tree/master/examples/todolist-reactive-backbone">repository on GitHub in the demo directory</a>.</p>
+
+<h3 id="code">Code</h3>
+
+<p>If you want to compare the three different approaches used to render this simple Todo list, have a look at the code:</p>
+
+<ul>
+<li><a href="https://github.com/seiffert/blog-articles/pimp-my-backbone.view/tree/master/examples/todolist-react">Todos with React</a></li>
+<li><a href="https://github.com/seiffert/blog-articles/pimp-my-backbone.view/tree/master/examples/todolist-backbone">Todos with Backbone.JS</a></li>
+<li><a href="https://github.com/seiffert/blog-articles/pimp-my-backbone.view/tree/master/examples/todolist-reactive-backbone">Todos with Reactive Backbone</a></li>
+</ul>
+
+<p>Hopefully, this article was able to highlight the benefits of combining React and Backbone.JS and convince you to give it a try. If you have any questions or want to give me feedback, feel free to add a comment or contact me via <a href="https://twitter.com/SeiffertP">Twitter</a>.</p>
