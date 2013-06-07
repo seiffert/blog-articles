@@ -15,7 +15,7 @@
 /** @jsx React.DOM */
 var TodoListItem = React.createClass({
     render: function () {
-        return &lt;li&gt;{this.props.todo.text}&lt;/li&gt;;
+        return <li>{this.props.todo.text}</li>;
     }
 });
 
@@ -30,14 +30,14 @@ var TodoList = React.createClass({
 
     render: function () {
         var todos = this.state.todos.map(function (todo) {
-            return &lt;TodoListItem todo={todo} /&gt;;
+            return <TodoListItem todo={todo} />;
         });
 
-        return &lt;ul&gt;{todos}&lt;/ul&gt;;
+        return <ul>{todos}</ul>;
     }
 });
 
-React.renderComponent(&lt;TodoList /&gt;, document.body);
+React.renderComponent(<TodoList />, document.body);
 </pre>
 
 <p>
@@ -219,7 +219,7 @@ define(['backbone', 'react', 'jsx!view/todoList'], function (Backbone, React, To
         }
       ]);
 
-      React.renderComponent(&lt;TodoList todos={todos} /&gt;, document.body);
+      React.renderComponent(<TodoList todos={todos} />, document.body);
     }
   });
 });
