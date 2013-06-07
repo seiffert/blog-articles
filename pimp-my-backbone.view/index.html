@@ -1,8 +1,8 @@
 <p>
     I've been using <em>Backbone.js</em> in a couple of projects now and my feelings about it are quite diverse. On the one hand, I like how it provides you with guidelines on how to structure your frontend code. Although splitting model and view is a very basic idea in software development, it also is very powerful. <em>Backbone.js</em> is of great help by providing collections which aggregate model instances and by being able to sync these models with a server via RESTful APIs. On the other hand, it always (and I hope that it's not just me) seems to be a pain in the b*** to figure out the best way to implement a proper view lifecycle and to keep track of all registered event handlers. If you aren't careful when removing or even just re-rendering views, you can seriously mess up event handling and prevent proper garbage collection. If you are just a little sloppy, this leads to a slow frontend with an always increasing memory footprint.<br />
-    I'm not saying that <em>Backbone.js</em> is bad in handling UI events, just that you have to care about too many things that are common to most web applications.
+    I'm not saying that <em>Backbone.js</em> is bad in handling UI events, just that you have to care about too many things that are common to most web applications. This article describes an alternative to the <code>Backbone.View</code> component.
 </p>
-
+<!--more-->
 <h2 id="react_pragmatically"><em>React</em> pragmatically</h2>
 
 <p>A few days ago, Facebook and Instagram published a JavaScript framework of theirs: <a target="_blank" href="http://facebook.github.io/react"><em>React</em></a>.</p>
