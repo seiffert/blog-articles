@@ -11,7 +11,7 @@
     <em>React</em> has some interesting concepts for JavaScript view objects that can be used to eliminate this one big problem I have with <em>Backbone.js</em>.<br />
     As in most <em>MVC</em> implementations (although <em>React</em> is probably just a <em>VC</em> implementation), a view is one portion of the screen that is managed by a controlling object. This object is responsible for deciding when to re-render the view and how to react to user input. With <em>React</em>, these view-controllers objects are called components. A component knows how to render its view and how to handle to the user's interaction with it. The interesting thing is that <em>React</em> is figuring out by itself when to re-render a view and how to do this in the most efficient way. Let's have a look at <a target="_blank" href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-react">an example</a>:</p>
 
-<pre><code>
+<pre>
 /** @jsx React.DOM */
 var TodoListItem = React.createClass({
     render: function () {
@@ -33,12 +33,12 @@ var TodoList = React.createClass({
             return &lt;TodoListItem todo={todo} /&gt;;
         });
 
-        return &lt;ul>{todos}&lt;/ul&gt;;
+        return &lt;ul&gt;{todos}&lt;/ul&gt;;
     }
 });
 
-React.renderComponent(<TodoList />, document.body);
-</code></pre>
+React.renderComponent(&lt;TodoList /&gt;, document.body);
+</pre>
 
 <p>
     This short snippet of code is defining two view components: <code>TodoListItem</code> and <code>TodoList</code>. Every time a <code>TodoList</code> is created, it is equipped with one standard todo (I have to remind myself of this every day!). When being rendered, the list delegates the rendering of single todos to the <code>TodoListItem</code> component class. The resulting components are then placed into a <code>&lt;ul&gt;</code> element. You might think that this is some kind of pseudocode - it's not! This is JavaScript with <em>JSX</em> which is being transformed to pure JavaScript before being executed. If you want to learn more about it, have a look at <a href="http://facebook.github.io/react/docs/syntax.html">React's documentation</a> - it's really simple to get started!
@@ -48,7 +48,7 @@ React.renderComponent(<TodoList />, document.body);
     So far, you haven't seen more code than required to render a simple list. However, the simplicity of this short snippet gives you a good idea of the rest of the framework - it's really not much more than that. The same functionality implemented with <em>Backbone.js</em> would look somewhat <a target="_blank" href="https://github.com/seiffert/blog-articles/tree/master/pimp-my-backbone.view/examples/todolist-backbone">like this</a>:
 </p>
 
-<pre><code>
+<pre>
 var TodoListItem = Backbone.View.extend({
     tagName: 'li',
 
@@ -142,7 +142,7 @@ var list = new TodoList({
 list.render();
 
 list.$el.appendTo(document.body);
-</code></pre>
+</pre>
 
 <p>
     This is at least the best approach to a proper handling the view lifecycle I have come across. As you can see: all the logic for keeping model and view in sync can be omitted with <em>React</em>.
@@ -165,7 +165,7 @@ list.$el.appendTo(document.body);
 
 <p>First, we need to set up a little <em>Backbone.js</em> application just like we would do without <em>React</em>. Whether you do this with <a target="_blank" href="http://yeoman.io"><em>Yeoman</em></a>, just <a target="_blank" href="http://bower.io/"><em>Bower</em></a>, or manually doesn't really matter. You will end up with an HTML document similar to this one</p>
 
-<pre><code>
+<pre>
 <!DOCTYPE html>
 <html>
     <head>
@@ -176,11 +176,11 @@ list.$el.appendTo(document.body);
         <script data-main="app/main" src="/lib/require.js"></script>
     </body>
 </html>
-</code></pre>
+</pre>
 
 <p>and some JavaScript file (in our case the <code>app/main.js</code> script) that configures the application:</p>
 
-<pre><code>
+<pre>
 require.config({
     deps: ["main"],
     paths: {
@@ -200,11 +200,11 @@ require.config({
 require(['app'], function(app) {
   app.run();
 });
-</code></pre>
+</pre>
 
 <p>In the application's <code>run</code> method I would like to start <em>Backbone.js</em>' history and let a router control the application. In the router, I would then render view components. To be able to do this, the router needs to know about <em>React</em> and also contain some <em>JSX</em> code:</p>
 
-<pre><code>
+<pre>
 define(['backbone', 'react', 'jsx!view/todoList'], function (Backbone, React, TodoList) {
   return Backbone.Router.extend({
     routes: {
@@ -219,11 +219,11 @@ define(['backbone', 'react', 'jsx!view/todoList'], function (Backbone, React, To
         }
       ]);
 
-      React.renderComponent(<TodoList todos={todos} />, document.body);
+      React.renderComponent(&lt;TodoList todos={todos} /&gt;, document.body);
     }
   });
 });
-</code></pre>
+</pre>
 
 <p>If we would try to load this file with the default <em>require.js</em> mechanism, we would probably get an <code>Uncaught SyntaxError: Unexpected token &lt;</code>. Now we need to use the above mentioned <em>require.js</em> plugin:</p>
 
@@ -232,7 +232,7 @@ define(['backbone', 'react', 'jsx!view/todoList'], function (Backbone, React, To
     <li>Put it into your JavaScript directory</li>
     <li>Update your <em>require.js</em> configuration in a way that it can find the plugin and <em>React</em></li>
     <li><p>Add the <code>router</code> to the <code>main</code> module's requirements</p>
-<pre><code>
+<pre>
 require.config({
     deps: ["main"],
     paths: {
@@ -256,7 +256,7 @@ require(['app', 'jsx!router'], function(app, Router) {
     app.router = new Router();
     app.run();
 });
-</code></pre>
+</pre>
     </li>
 </ol>
 
