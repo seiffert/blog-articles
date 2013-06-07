@@ -16,7 +16,7 @@ require.config({
     }
 });
 
-require(['backbone', 'app', 'jsx!router'], function(Backbone, app, Router) {
+require(['app', 'jsx!router'], function(app, Router) {
     app.router = new Router();
     app.run();
 });

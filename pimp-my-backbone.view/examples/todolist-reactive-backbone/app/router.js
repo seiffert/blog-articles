@@ -12,10 +12,7 @@ define(['backbone', 'react', 'jsx!view/todoList'], function (Backbone, React, To
         }
       ]);
         
-      React.renderComponent(
-        <TodoList todos={todos} />,
-        document.body
-      );
+      React.renderComponent(<TodoList todos={todos} />, document.body);
     }
   });
 });

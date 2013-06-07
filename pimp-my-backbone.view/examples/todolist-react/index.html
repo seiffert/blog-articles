@@ -5,8 +5,7 @@
     <script src="lib/JSXTransformer.js"></script>
 </head>
 <body>
-    
-    <script type="text/jsx">
+        <script type="text/jsx">
         /** @jsx React.DOM */
         var TodoListItem = React.createClass({
             render: function () {
@@ -16,6 +15,10 @@
 
         var TodoList = React.createClass({
             getInitialState: function () {
+                // @TODO: Listen for changes on the underlying model and call 
+                //          this.setState({ todos: updatedTodos }) 
+                //        every time there is a change.
+                
                 return { todos: [{ text: 'Dishes!', dueDate: new Date() }] };
             },
     
